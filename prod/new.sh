@@ -6,13 +6,13 @@
 VERSION=1.1
 
 usage() {
-	echo "Usage: $0 <new_script_filename>"
+	echo "Usage: `basename $0` <new_script_filename>"
 	exit 1
 }
 # add option to open new file in vim?
 
 hello_there() {
-  printf "Hello there, user. I am new.sh %s\n" $VERSION
+  printf "Hello there, user. I am  `basename $0` v%s\n" $VERSION
 }
 
 # Add option for custom date specifier?
@@ -49,6 +49,7 @@ then
 	if [ ! -f $1 ]
 	then
 		generate_script $1
+    printf "Created a blank bash script named \"%s\"\n" $1
 	# Otherwise, don't do anything
 	else
 		printf "File \"$1\" exists. Will not overwrite.\n"
