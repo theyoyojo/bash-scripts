@@ -2,6 +2,7 @@ scripts planned:
 
 new.sh
 	create new scripts
+	new script from template, can choose with args
 deploy
 	move a script to be accessible via PATH
 install.sh
