@@ -1,0 +1,8 @@
+scripts planned:
+
+new.sh
+	create new scripts
+deploy
+	move a script to be accessible via PATH
+install.sh
+	setup system to run these scripts
