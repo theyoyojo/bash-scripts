@@ -3,11 +3,17 @@
 # By Joel Savitz <jsavitz@redhat.com>
 # Creates a new shell script with a few lines of starter code and executable permisisons set
 
+VERSION=1.1
+
 usage() {
 	echo "Usage: $0 <new_script_filename>"
 	exit 1
 }
 # add option to open new file in vim?
+
+hello_there() {
+  printf "Hello there, user. I am new.sh %s\n" $VERSION
+}
 
 # Add option for custom date specifier?
 generate_script() {
@@ -30,8 +36,13 @@ generate_script() {
 
   # Add a line for the author of the new script to enter their intended purpose
   printf "#\n# Purpose: \n" >> $1
+
+  # Why not add the concluding exit while we are here?
+  printf "\n\nexit" >> $1
 }
 
+# Main entry point for script
+hello_there
 if [ -n "$1" ]
 then
 	# If the file does not exist, generate it
