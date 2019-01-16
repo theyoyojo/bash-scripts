@@ -1,9 +1,32 @@
 scripts planned:
 
 new.sh
-	create new scripts
+	create new scripts /DONE
 	new script from template, can choose with args
+	template:
+		header:
+			shabang
+			vesion/date
+			author
+		general defs:
+			version
+			exit codes
+		general functions:
+			usage
+			hello_there
+			options template:
+				-h|--help -> usage()
+		some whitespace:
+			
+
+		exit:
+			generic
+			
 deploy
-	move a script to be accessible via PATH
+	move a script to be accessible via PATH /DONE
+	validate certain aspects of script
 install.sh
-	setup system to run these scripts
+	setup system to run these scripts /DONE
+
+autobeaker
+	setup a new beakers system quickly
