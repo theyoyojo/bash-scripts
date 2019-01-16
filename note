@@ -1,0 +1,5 @@
+Attempt to recreate issue at work:
+
+touch <anything> | vim <anything>
+
+fucks urxvt
