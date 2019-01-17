@@ -15,7 +15,7 @@ E_FILE_NOT_FOUND=2
 
 # Configuration
 # TODO: load this from somewhere else
-EDITOR=vim
+EDITOR=/usr/local/bin/vim
 
 usage() {
 	echo "Usage: `basename $0` <filename>"
@@ -50,7 +50,7 @@ check_if_exists $1
 
 # Open the file in it's directory
 cd "$SCRIPT_DIR/../dev"
-eval "`basename $EDITOR` $ABSOLUTE_PATH"
+eval "$EDITOR $ABSOLUTE_PATH"
 
 printf "Closing %s and exiting...\n" "$1"
 exit $SUCCESS

@@ -7,9 +7,16 @@
 
 i=$((0))
 
-printf "$i"
+LIMIT=10 # seconds
+
+echo -n "Counting until $LIMIT in this box: [$i]"
+
+while [[ $i -lt $LIMIT ]]; do
+printf "%d" $i
+i="$((i+1))"
 sleep 1
-printf "%d" "$((i+1))"
-sleep 1
+done
+
+echo
 
 exit
