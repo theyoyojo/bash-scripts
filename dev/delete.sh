@@ -77,4 +77,4 @@ get_confirmation "You have commanded me to delete $1\n"
 # Delete the script and associated files
 delete_script $1
 
-exit
+exit $SUCCESS
