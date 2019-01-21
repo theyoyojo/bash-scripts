@@ -6,6 +6,7 @@
 #+executable permisisons set
 # Note: requires installation
 
+
 VERSION=1.1
 SUCCESS=0
 E_INCORRECT_USAGE=1
@@ -23,8 +24,6 @@ hello_there() {
 
 # Add option for custom date specifier?
 generate_script() {
-
-	ABSOLUTE_PATH = "$SCRIPT_DIR/dev/$1"
 
 	# Create the skeleton of the script: The file itself, executable permissions,
 	#+and the first line of every bash script, as seen below
@@ -54,7 +53,7 @@ generate_script() {
 
 # Does the first argument exist?
 check_args() {
-	if [ ! -n $1 ]
+	if [ -z "$1" ]
 	then
 		usage
 	fi
@@ -75,8 +74,13 @@ hello_there
 # Determine the absolute file path
 ABSOLUTE_PATH="$SCRIPT_DIR/../dev/$1"
 
-check_args
-check_if_exists
+# Validate preconditions for main body execution
+
+# User must supply one or more arguments
+check_args  $1
+
+# The filename given as the first argument must not exist in $SCRIPT_DIR/../dev/
+check_if_exists $1
 
 # If the file does not exist, generate it
 generate_script $1

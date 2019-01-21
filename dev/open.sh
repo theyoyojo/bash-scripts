@@ -15,7 +15,7 @@ E_FILE_NOT_FOUND=2
 
 # Configuration
 # TODO: load this from somewhere else
-EDITOR=/usr/local/bin/vim
+EDITOR=vim
 
 usage() {
 	echo "Usage: `basename $0` <filename>"
