@@ -30,3 +30,14 @@ install.sh
 
 autobeaker
 	setup a new beakers system quickly
+
+architecture of a script:
+	<script-dir>
+		function_file(s)
+		main_entry_point
+		meta_info
+			Author
+			Purpose
+			Version info/Timestamps
+			Requirements
+			
