@@ -41,3 +41,9 @@ architecture of a script:
 			Version info/Timestamps
 			Requirements
 			
+
+bash-tools repo
+	create, edit, manage, track, delete
+
+bash-scripts repo
+	useful scripts managed by bash-tools system

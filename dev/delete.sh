@@ -4,12 +4,14 @@
 #
 # Purpose: Deletes scripts and associated files
 
+VERSION=1
+
 SUCCESS=0
 E_INCORRECT_USAGE=1
 E_FILE_NOT_FOUND=2
 
 usage() {
-	echo "Usage: `basename $0` <>"
+	echo "Usage: `basename $0` <script_name>"
 	exit $E_INCORRECT_USAGE
 }
 
@@ -73,6 +75,9 @@ check_if_not_exists $1
 
 # Quit if user does not want to continue
 get_confirmation "You have commanded me to delete $1\n"
+
+
+# Body
 
 # Delete the script and associated files
 delete_script $1

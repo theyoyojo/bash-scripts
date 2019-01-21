@@ -27,9 +27,9 @@ install.sh has what you need
 	* appends scripts to appropriate headers // TODO
 	* script is now executable via PATH
 	* fails if the file does not exist
-	* runs tests on script // TODO
+	* runs tests on script, TAP-compliant output // TODO
 	* fails if tests fail and reports failures // TODO
-	* fails if requirements for sytem to run script are not met
+	* fails if requirements for system to run script are not met
 * delete.sh <filename>
 	* deletes <filename> from $SCRIPT_DIR and $SCRIPT_DIR/../dev
 	* will ask for confirmation

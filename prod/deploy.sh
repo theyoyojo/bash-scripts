@@ -10,7 +10,7 @@
 # or: given a filename, copy it from dev to prod in repo root
 
 usage() {
-	echo "Usage: $0 <script_filename>"
+	echo "Usage: `basename $0` <script_name>"
 	exit 1
 }
 

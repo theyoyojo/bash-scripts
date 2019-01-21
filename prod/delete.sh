@@ -9,7 +9,7 @@ E_INCORRECT_USAGE=1
 E_FILE_NOT_FOUND=2
 
 usage() {
-	echo "Usage: `basename $0` <>"
+	echo "Usage: `basename $0` <filename>"
 	exit $E_INCORRECT_USAGE
 }
 
@@ -77,4 +77,4 @@ get_confirmation "You have commanded me to delete $1\n"
 # Delete the script and associated files
 delete_script $1
 
-exit
+exit $SUCCESS

@@ -27,7 +27,7 @@ hello_there() {
 }
 
 check_args() {
-	if [ ! -n $1 ]
+	if [ -z "$1" ]
 	then
 		usage
 	fi
@@ -45,7 +45,7 @@ check_if_exists() {
 hello_there
 
 ABSOLUTE_PATH="$SCRIPT_DIR/../dev/$1"
-check_args
+check_args $1
 check_if_exists $1
 
 # Open the file in it's directory
