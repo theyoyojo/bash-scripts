@@ -34,13 +34,13 @@ install.sh has what you need
 	* deletes <filename> from $SCRIPT_DIR and $SCRIPT_DIR/../dev
 	* will ask for confirmation
 	* fails if the file does not exist
-
-
-##### PROPOSED FEATURES FOLLOW:
 * disable.sh <filename>
 	* deletes <filename> from $SCRIPT_DIR
 	* script is no longer executable via PATH
 	* fails if the file does not exist
+
+
+##### PROPOSED FEATURES FOLLOW:
 * import.sh <library-name>
 	* source a set of files in order to access a particular API
 
