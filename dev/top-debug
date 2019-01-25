@@ -4,6 +4,12 @@
 #
 # Purpose: Debug top easily, get some nice output
 
+# User has no choice
+EDITOR=vim
+
+# This is set in top.c by me
+OUTPUT_FILENAME=db_output
+
 SUCCESS=0
 E_INCORRECT_USAGE=1
 VERSION=1
@@ -16,6 +22,7 @@ REPO_PATH_TO_EXEC=top/top
 
 usage() {
 	echo "Don't, this script was hastily written and is probably not very well tested"
+	echo "but if you insist, the argument 'o' will open the file when script is done"
 	exit $E_INCORRECT_USAGE
 }
 
@@ -31,7 +38,7 @@ build_executable() {
 
 execute_and_kill() {
 	# Make a little (but unique) test directory
-	TESTDIR="$HOME/test-`date +%F-%T`"
+	TESTDIR="$HOME/unique-test-`date +%F-%T`"
 	mkdir $TESTDIR
 	
 	# Put the custom "top" executable script file in there
@@ -41,14 +48,23 @@ execute_and_kill() {
 	cd $TESTDIR
 	eval "sleep 5 && pkill -9 `basename $REPO_PATH_TO_EXEC`" &>/dev/null &disown
 	./"`basename $REPO_PATH_TO_EXEC`"
+}
 
-	# Aesthetic exit
-	clear
+open_output() {
+	echo "Opening output..."
+	cd $TESTDIR
+	"$EDITOR" "$OUTPUT_FILENAME"
 }
 
 # Main entry point
 hello_there
 build_executable
 execute_and_kill
+
+# Option to open output file when done (does not work)
+if [ "$1" == "o" ]
+then
+	open_output 
+fi
 
 exit $SUCCESS
