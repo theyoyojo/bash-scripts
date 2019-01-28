@@ -1,0 +1,17 @@
+#!/bin/bash
+# keep_updating v1 created 26 January 2019 
+# By Joel Savitz <joelsavitz@gmail.com>
+#
+# Purpose: Keep up to date
+
+SUCCESS=1
+
+INTERVAL=5
+
+for((;;))
+do
+	pacman -Syu
+	sleep $INTERVAL
+done
+
+exit $SUCCESS
