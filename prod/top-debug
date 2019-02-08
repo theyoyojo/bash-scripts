@@ -1,0 +1,70 @@
+#!/bin/bash
+# top-debug v1 created 23 January 2019 
+# By Joel Savitz <jsavitz@redhat.com>
+#
+# Purpose: Debug top easily, get some nice output
+
+# User has no choice
+EDITOR=vim
+
+# This is set in top.c by me
+OUTPUT_FILENAME=db_output
+
+SUCCESS=0
+E_INCORRECT_USAGE=1
+VERSION=1
+
+# Modify to relative path to procps repository
+REPO_DIR=$HOME/procps/
+
+# Path to executable to copy after build (from repo root)
+REPO_PATH_TO_EXEC=top/top
+
+usage() {
+	echo "Don't, this script was hastily written and is probably not very well tested"
+	echo "but if you insist, the argument 'o' will open the file when script is done"
+	exit $E_INCORRECT_USAGE
+}
+
+hello_there() {
+	printf "Hello there, user. I am  `basename $0` v%s\n" $VERSION
+}
+
+build_executable() {
+	# Make top (& everything else in the package, unfortunately)
+	cd $REPO_DIR
+	make
+}
+
+execute_and_kill() {
+	# Make a little (but unique) test directory
+	TESTDIR="$HOME/unique-test-`date +%F-%T`"
+	mkdir $TESTDIR
+	
+	# Put the custom "top" executable script file in there
+	cp $REPO_DIR/$REPO_PATH_TO_EXEC $TESTDIR
+
+	# Go there, run the script for a few seconds, and then kill it
+	cd $TESTDIR
+	eval "sleep 5 && pkill -9 `basename $REPO_PATH_TO_EXEC`" &>/dev/null &disown
+	./"`basename $REPO_PATH_TO_EXEC`"
+}
+
+open_output() {
+	echo "Opening output..."
+	cd $TESTDIR
+	"$EDITOR" "$OUTPUT_FILENAME"
+}
+
+# Main entry point
+hello_there
+build_executable
+execute_and_kill
+
+# Option to open output file when done (does not work)
+if [ "$1" == "o" ]
+then
+	open_output 
+fi
+
+exit $SUCCESS
