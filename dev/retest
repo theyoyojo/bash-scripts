@@ -1,0 +1,21 @@
+#!/bin/bash
+# retest v1 created 22 January 2019 
+# By Joel Savitz <jsavitz@redhat.com>
+#
+# Purpose: To save like three keystrokes
+
+SUCCESS=0
+
+if [ "$1" == "-f" ]
+then
+	deploy.sh "$2"
+	bin="$2"
+	shift 2
+	"$bin" $@
+else
+	deploy.sh "test.sh"
+	test.sh $@
+	
+fi
+
+exit $SUCCESS

@@ -1,0 +1,135 @@
+#!/bin/bash
+# beakermeup v1 created 07 February 2019 
+# By Joel Savitz <jsavitz@redhat.com>
+#
+# Purpose: Basic beaker setup
+
+VERSION=1
+SUCCESS=0
+E_INCORRECT_USAGE=1
+E_CONNECTION_FAILED=2
+
+# Reasonable default, won't throw any errors
+DEFAULT_USER='root'
+
+# Unreasonable default, should and expected to throw a visible error 
+DEFAULT_HOST='invalid_host_generic_string_wontwork_longname_willnotice'
+
+# Set inital values to defaults
+USER="$DEFAULT_USER"
+HOST="$DEFAULT_HOST"
+
+# Useful tools located at these urls, will clone
+
+RH_ENGINEER_REPO_NAME='rh-engineer'
+BASH_SCRIPTS_REPO_NAME='bash-scripts'
+VIM_PORTABILITY_SUITE_REPO_NAME='vim-portability-suite'
+
+RH_ENGINEER_INSTALL_SCRIPT='rh-engineer_install.sh'
+BASH_SCRIPTS_INSTALL_SCRIPT='install.sh'
+
+RH_ENGINEER_GIT_URL="git://git.engineering.redhat.com/users/prarit/$RH_ENGINEER_REPO_NAME/.git"
+BASH_SCRIPTS_GIT_URL="https://github.com/theyoyojo/$BASH_SCRIPTS_REPO_NAME"
+VIM_PORTABILITY_SUITE_GIT_URL="https://github.com/theyoyojo/$VIM_PORTABILITY_SUITE_REPO_NAME"
+
+usage() {
+	echo "Usage: `basename $0` <remote_address> <optional_username>"
+	exit $E_INCORRECT_USAGE
+}
+
+hello_there() {
+	printf "Hello there, user. I am  `basename $0` v%s\n" $VERSION
+}
+
+check_args_and_handle() {
+
+	# Handle first argument: Hostname
+	if [ -z $1 ]
+	then
+		usage
+	else
+		HOST="$1"
+	fi
+
+	# Handle optional second argument: Username
+	# Defaults to root if none supplied
+	if [ ! -z $2 ]
+	then
+		USER="$2"
+	fi
+}
+
+# The setup script should really not be in a herefile
+remote_setup_exec() {
+	local GIT_NAME="$(git config --get user.name)"
+	local GIT_EMAIL="$(git config --get user.email)"
+	local PLAINTEXT_PASSWORD_INSECURE=
+
+	# If there is a file named ezpass in the working directory at runtime
+	#+then the password of the new account will be set to the contents of
+	#+the file
+	if [ -f "ezpass" ]
+	then
+		PLAINTEXT_PASSWORD_INSECURE=`cat ezpass`
+	fi
+
+	ssh "$USER@$HOST" "bash -s" <<EOF
+# Setup the absolute basics
+yum install -y git gcc gcc-c++ make vim
+git config --global user.name "$GIT_NAME"
+git config --global user.email "$GIT_EMAIL"
+
+# Install my bash scripts
+if [ ! -d $BASH_SCRIPTS_REPO_NAME ]
+then
+	git clone "$BASH_SCRIPTS_GIT_URL"
+	cd "$BASH_SCRIPTS_REPO_NAME"
+	./"$BASH_SCRIPTS_INSTALL_SCRIPT"
+	cd ~
+fi
+
+# Setup environment using prarit's script
+if [ ! -d $RH_ENGINEER_REPO_NAME ]
+then
+	git clone "$RH_ENGINEER_GIT_URL"
+	cd "$RH_ENGINEER_REPO_NAME"
+
+	# Skip use creation with -s flag
+	exec "./$RH_ENGINEER_INSTALL_SCRIPT" -s 
+	cd ~
+fi
+
+# Autopimp my vim
+if [ ! -d $VIM_PORTABILITY_SUITE_REPO_NAME ]
+then
+	git clone "$VIM_PORTABILITY_SUITE_GIT_URL"
+	cp "$VIM_PORTABILITY_SUITE_REPO_NAME"/* ~
+	cd ~
+fi
+
+# Sudo up boys
+echo "%sudo	ALL=(ALL)	NOPASSWD: ALL" | sudo EDITOR="tee -a" visudo
+NEWUSER=$(tr '@' '\n' <<<$GIT_EMAIL | head -1)
+useradd \$NEWUSER
+groupadd sudo
+usermod -G sudo \$NEWUSER
+if [ ! -z "$PLAINTEXT_PASSWORD_INSECURE" ]
+then
+	echo $PLAINTEXT_PASSWORD_INSECURE | passwd \$NEWUSER --stdin
+fi
+
+EOF
+
+	# Report a connection failure
+	if [ $? -ne 0 ]
+	then
+		echo "Connection to $USER@$HOST failed!"
+		exit $E_CONNECTION_FAILED
+	fi
+}
+
+hello_there
+check_args_and_handle $@
+remote_setup_exec
+
+exit $SUCCESS

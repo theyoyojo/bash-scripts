@@ -1,0 +1,88 @@
+#!/bin/bash
+# cputest v1 created 07 February 2019 
+# By Joel Savitz <jsavitz@redhat.com>
+#
+# Purpose: Test some cpu info stuff
+
+VERSION=1
+SUCCESS=0
+E_INCORRECT_USAGE=1
+E_CONNECTION_FAILED=2
+
+# Reasonable default, won't throw any errors
+DEFAULT_USER='root'
+
+# Unreasonable default, should and expected to throw a visible error 
+DEFAULT_HOST='invalid_host_generic_string_wontwork_longname_willnotice'
+
+# Set inital values to defaults
+USER="$DEFAULT_USER"
+HOST="$DEFAULT_HOST"
+
+REMOTE_OUTPUT_FILENAME="cputest_output"
+
+usage() {
+	echo "Usage: `basename $0` <remote_address> <optional_username>"
+	exit $E_INCORRECT_USAGE
+}
+
+hello_there() {
+	printf "Hello there, user. I am  `basename $0` v%s\n" $VERSION
+}
+
+# A bit of validation, but pretty lazy
+check_args_and_handle() {
+
+	# Handle first argument: Hostname
+	if [ -z $1 ]
+	then
+		usage
+	else
+		HOST="$1"
+	fi
+
+	# Handle optional second argument: Username
+	# Defaults to root if none supplied
+	if [ ! -z $2 ]
+	then
+		USER="$2"
+	fi
+}
+
+# Run commands on remote machine
+# Can be futher abstracted
+generate_output() {
+	ssh "$USER@$HOST" "bash -s" <<EOF
+touch 			      	   	   "$REMOTE_OUTPUT_FILENAME"
+printf ""				 > "$REMOTE_OUTPUT_FILENAME"
+printf "\n\t# uname -a\n\t" 		>> "$REMOTE_OUTPUT_FILENAME"
+uname -a 				>> "$REMOTE_OUTPUT_FILENAME"
+printf "\n\t# nproc\n\t"	 	>> "$REMOTE_OUTPUT_FILENAME"
+nproc 					>> "$REMOTE_OUTPUT_FILENAME"
+printf "\n\t# grep Cpus_allowed \
+/proc/\\$\\$/status\n\t"		>> "$REMOTE_OUTPUT_FILENAME"
+grep Cpus_allowed: /proc/\$\$/status	>> "$REMOTE_OUTPUT_FILENAME"
+printf "\t"				>> "$REMOTE_OUTPUT_FILENAME"
+grep Cpus_allowed_ /proc/\$\$/status	>> "$REMOTE_OUTPUT_FILENAME"
+EOF
+	# Report a connection failure
+	if [ $? -ne 0 ]
+	then
+		echo "Connection to $USER@$HOST failed!"
+		exit $E_CONNECTION_FAILED
+	fi
+}
+
+cat_output_locally() {
+	local tempfile="tempfile_$(date +%F-T)"
+	touch /tmp/$tmpfile
+	scp "$USER@$HOST:$REMOTE_OUTPUT_FILENAME" /tmp/$tempfile
+	cat /tmp/$tempfile
+}
+
+hello_there
+check_args_and_handle $@
+generate_output
+cat_output_locally
+
+exit $SUCCESS

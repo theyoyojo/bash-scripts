@@ -1,0 +1,59 @@
+#!/bin/bash
+# for_host_exec v1 created 07 February 2019 
+# By Joel Savitz <jsavitz@redhat.com>
+#
+# Purpose: Execute a script on a bunch of different hosts at once
+
+VERSION=1
+SUCCESS=0
+E_INCORRECT_USAGE=1
+E_CONNECTION_FAILED=2
+
+DEFAULT_HOST_LIST_FILENAME='invalid_host_list_name_generic_string_wontwork_longname_willnotice'
+DEFAULT_HOST_LIST='invalid_host_list_generic_string_wontwork_longname_willnotice'
+DEFAULT_SCRIPT_PATH='invalid_script_path_generic_string_wontwork_longname_willnotice'
+DEFAULT_USER='root'
+
+HOST_LIST_FILENAME="$DEFAULT_HOST_LIST_FILENAME"
+HOST_LIST="$DEFAULT_HOST_LIST"
+SCRIPT_PATH="$DEFAULT_SCRIPT_PATH"
+USER="$DEFAULT_USER"
+
+usage() {
+	echo "Usage: `basename $0` <host_list_file> <script_path> <optional_username>"
+	exit $E_INCORRECT_USAGE
+}
+
+hello_there() {
+	printf "Hello there, user. I am  `basename $0` v%s\n" $VERSION
+}
+
+validate_args_open_files() {
+	if [ -z "$1" ] || [ -z "$2" ]
+	then
+		usage
+	else
+		HOST_LIST_FILENAME="$1"
+		SCRIPT_PATH="$2"
+	fi
+
+	if [ ! -z "$3" ]
+	then
+		USER="$3"
+	fi
+
+}
+
+for_host_exec_script() {
+	while read hostname
+	do
+		"$SCRIPT_PATH" "$hostname" "$USER"
+	done < $HOST_LIST_FILENAME
+}
+
+hello_there
+validate_args_open_files "$@"
+
+for_host_exec_script
+
+exit $SUCCESS

@@ -6,4 +6,18 @@
 
 echo "RAN test.sh"
 
+echo "preshift"
+
+echo "\$@= $@"
+echo "\$*= $*"
+echo "\$#= $#"
+
+shift 2
+
+echo "postshift"
+
+echo "\$@= $@"
+echo "\$*= $*"
+echo "\$#= $#"
+
 exit
