@@ -1,0 +1,14 @@
+#!/bin/bash
+# testimport v1 created 08 February 2019 
+# By Joel Savitz <jsavitz@redhat.com>
+#
+# Purpose: Test my import.sh utility
+
+import.sh functionfile
+
+func
+
+ret=$?
+
+echo ret: $?
+exit $ret

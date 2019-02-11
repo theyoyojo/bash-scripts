@@ -47,3 +47,28 @@ bash-tools repo
 
 bash-scripts repo
 	useful scripts managed by bash-tools system
+	
+
+=== New notes ===
+
+A few things to consider with regards to workflow.
+
+The goal of this project is to simplify and shorten the process of creating effective shell scripts for general use.
+
+
+What kind of features would I want to have?
+
+--Import common functionality, like usage, welcome mesage, exit codes, version
+
+--Formatted meta-data about scripts
+
+--Immediate high level of abstraction when creating new scripts
+
+--Little clutter in script files
+
+--As little repetition as possible
+
+--as easily readable as writable i.e. the scripts in prod/ would contain all used imported functions and their accompanying documentation
+
+
+What would the workflow look like 

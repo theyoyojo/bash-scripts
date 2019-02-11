@@ -1,0 +1,11 @@
+#!/bin/bash
+# functionfile v1 created 08 February 2019 
+# By Joel Savitz <jsavitz@redhat.com>
+#
+# Purpose: A file that functions
+
+func() {
+	echo "func() executed"
+}
+
+#noexit
