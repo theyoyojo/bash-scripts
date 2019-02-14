@@ -64,14 +64,20 @@ remote_setup_exec() {
 	local GIT_NAME="$(git config --get user.name)"
 	local GIT_EMAIL="$(git config --get user.email)"
 	local PLAINTEXT_PASSWORD_INSECURE=
+
+	# If there is a file named ezpass in the working directory at runtime
+	#+then the password of the new account will be set to the contents of
+	#+the file
 	if [ -f "ezpass" ]
 	then
 		PLAINTEXT_PASSWORD_INSECURE=`cat ezpass`
 	fi
 
+	echo "Connecting to $USER@$HOST..."
+
 	ssh "$USER@$HOST" "bash -s" <<EOF
 # Setup the absolute basics
-yum install -y git gcc gcc-c++ make vim
+yum install -y git gcc gcc-c++ make vim cmake python-devel
 git config --global user.name "$GIT_NAME"
 git config --global user.email "$GIT_EMAIL"
 
