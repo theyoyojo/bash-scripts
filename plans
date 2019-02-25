@@ -41,6 +41,9 @@ architecture of a script:
 			Version info/Timestamps
 			Requirements
 			
+ls.sh, cd.sh
+	list available scripts, go to script dir
+	can be aliases
 
 bash-tools repo
 	create, edit, manage, track, delete

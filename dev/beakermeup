@@ -77,7 +77,7 @@ remote_setup_exec() {
 
 	ssh "$USER@$HOST" "bash -s" <<EOF
 # Setup the absolute basics
-yum install -y git gcc gcc-c++ make vim cmake python-devel
+yum install -y git gcc gcc-c++ make vim cmake python-devel ncurses-devel flex bison openssl-devel elfutils-libelf-devel bc
 git config --global user.name "$GIT_NAME"
 git config --global user.email "$GIT_EMAIL"
 
