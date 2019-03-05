@@ -1,0 +1,49 @@
+#!/bin/bash
+# dbexec v1 created 05 March 2019 
+# By Joel Savitz <jsavitz@redhat.com>
+#
+# Purpose: easily execute scripts in dev directory without deploying
+
+
+VERSION=1
+SUCCESS=0
+E_INCORRECT_USAGE=1
+E_FILE_NOT_FOUND=2
+
+usage() {
+	echo "Usage: `basename $0` <script_filename>"
+	exit $E_INCORRECT_USAGE
+}
+
+hello_there() {
+	printf "Hello there, user. I am  `basename $0` v%s\n" $VERSION
+}
+
+assert_existence() {
+	if [ ! -f $SCRIPT_DIR/../dev/$1 ]
+	then
+		echo "No such script \"$1\" in $SCRIPT_DIR/../dev"
+		exit $E_FILE_NOT_FOUND
+	fi
+}
+
+check_args() {
+	if [ -z $1 ]
+	then
+		usage
+	fi
+}
+
+execute() {
+	script_name=`basename $1`
+	shift
+	bash "$SCRIPT_DIR/../dev/$script_name" $@
+
+}
+
+hello_there
+check_args $@
+assert_existence $1
+execute $@
+
+exit $SUCCESS

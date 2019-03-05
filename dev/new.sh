@@ -71,7 +71,7 @@ check_if_exists() {
 # Main entry point for script
 hello_there
 
-# Determine the absolute file path
+ # Determinethe absolute file path
 ABSOLUTE_PATH="$SCRIPT_DIR/../dev/$1"
 
 # Validate preconditions for main body execution

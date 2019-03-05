@@ -2,9 +2,10 @@
 # beakermeup v1 created 07 February 2019 
 # By Joel Savitz <jsavitz@redhat.com>
 #
-# Purpose: Basic beaker setup
+# Purpose: Enter a beaker instance and set it up if needed
+# v1.1 update on 5 March 2019: Single command configure & connect, simple history mechanism
 
-VERSION=1
+VERSION=1.1
 SUCCESS=0
 E_INCORRECT_USAGE=1
 E_CONNECTION_FAILED=2
@@ -32,6 +33,9 @@ RH_ENGINEER_GIT_URL="git://git.engineering.redhat.com/users/prarit/$RH_ENGINEER_
 BASH_SCRIPTS_GIT_URL="https://github.com/theyoyojo/$BASH_SCRIPTS_REPO_NAME"
 VIM_PORTABILITY_SUITE_GIT_URL="https://github.com/theyoyojo/$VIM_PORTABILITY_SUITE_REPO_NAME"
 
+# for easy reconnect
+MOST_RECENT_HOST=
+
 usage() {
 	echo "Usage: `basename $0` <remote_address> <optional_username>"
 	exit $E_INCORRECT_USAGE
@@ -41,12 +45,21 @@ hello_there() {
 	printf "Hello there, user. I am  `basename $0` v%s\n" $VERSION
 }
 
-check_args_and_handle() {
+check_history() {
+	if [ ! -f ~/beakermeup_most_recent_host ]
+	then	
+		echo "Record of previous session does not exist! See usage:"
+		usage
+	fi
+	MOST_RECENT_HOST=$(cat ~/beakermeup_most_recent_host)
+}
 
+check_args_and_handle() {
 	# Handle first argument: Hostname
 	if [ -z $1 ]
 	then
-		usage
+		check_history
+		HOST="$MOST_RECENT_HOST"
 	else
 		HOST="$1"
 	fi
@@ -77,7 +90,9 @@ remote_setup_exec() {
 
 	ssh "$USER@$HOST" "bash -s" <<EOF
 # Setup the absolute basics
-yum install -y git gcc gcc-c++ make vim cmake python-devel ncurses-devel flex bison openssl-devel elfutils-libelf-devel bc cscope
+yum install -y git gcc gcc-c++ make vim cmake 
+yum install -y python-devel ncurses-devel flex bison openssl-devel elfutils-libelf-devel 
+yum install -y bc cscope
 git config --global user.name "$GIT_NAME"
 git config --global user.email "$GIT_EMAIL"
 
@@ -118,6 +133,8 @@ if [ ! -z "$PLAINTEXT_PASSWORD_INSECURE" ]
 then
 	echo $PLAINTEXT_PASSWORD_INSECURE | passwd \$NEWUSER --stdin
 fi
+# place a mark in ~ to signify that this script reached the end
+touch ~/beakermeup_was_here
 
 EOF
 
@@ -129,8 +146,38 @@ EOF
 	fi
 }
 
+check_if_machine_is_configured() {
+	scp $USER@$HOST:~/beakermeup_was_here /tmp
+	is_configured=$?
+	if [ $is_configured ]
+	then
+		rm /tmp/beakermeup_was_here
+	fi
+	return $is_configured
+}
+
+# At this point, we can guarentee that the host value is valid,
+#+else we would have quit with an error earlier in control flow
+start_session() {
+	ssh $USER@$HOST
+	#reset && ssh $USER@$HOST
+	echo "$HOST" > ~/beakermeup_most_recent_host
+}
+
 hello_there
 check_args_and_handle $@
-remote_setup_exec
+is_configured=
+for ((;;))
+do
+	check_if_machine_is_configured
+	if [ "$is_configured" == "0" ]
+	then
+		break
+	else
+		remote_setup_exec
+	fi
+done
+
+start_session
 
 exit $SUCCESS
