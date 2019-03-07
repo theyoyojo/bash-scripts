@@ -92,11 +92,12 @@ remote_setup_exec() {
 # Setup the absolute basics
 yum install -y git gcc gcc-c++ make vim cmake 
 yum install -y python-devel ncurses-devel flex bison openssl-devel elfutils-libelf-devel 
-yum install -y bc cscope
+yum install -y bc cscope cargo libudev-devel
 git config --global user.name "$GIT_NAME"
 git config --global user.email "$GIT_EMAIL"
 
 # Install my bash scripts
+echo "Installing Joel Savitz' bash scripts from remote..."
 if [ ! -d $BASH_SCRIPTS_REPO_NAME ]
 then
 	git clone "$BASH_SCRIPTS_GIT_URL"
