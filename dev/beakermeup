@@ -160,9 +160,8 @@ check_if_machine_is_configured() {
 # At this point, we can guarentee that the host value is valid,
 #+else we would have quit with an error earlier in control flow
 start_session() {
-	ssh $USER@$HOST
-	#reset && ssh $USER@$HOST
 	echo "$HOST" > ~/beakermeup_most_recent_host
+	reset && ssh $USER@$HOST
 }
 
 hello_there
