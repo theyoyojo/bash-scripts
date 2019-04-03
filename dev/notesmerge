@@ -1,0 +1,9 @@
+#!/bin/bash
+# notesmerge v1 created 28 March 2019 
+# By Joel Savitz <jsavitz@redhat.com>
+#
+# Purpose: merge new branch into master joel@theBox:~/rhnotes/.git
+
+ssh joel@home.joelsavitz.com -p 3938 "cd ~/rhnotes && git merge new"
+
+exit 0

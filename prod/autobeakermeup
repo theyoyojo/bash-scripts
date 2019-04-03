@@ -1,0 +1,14 @@
+#!/bin/bash
+# autobeakermeup v1 created 18 March 2019 
+# By Joel Savitz <jsavitz@redhat.com>
+#
+# Purpose: beakermeup on a loop. That's it.
+
+
+for((;;))
+do
+	beakermeup $@
+	sleep 5
+done
+
+exit 0
