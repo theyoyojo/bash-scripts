@@ -1,0 +1,17 @@
+#!/bin/bash
+# gimmie_upstream v1 created 08 April 2019 
+# By Joel Savitz <jsavitz@redhat.com>
+#
+# Purpose: Put the latest upstream linux in the home directory
+
+if [ ! -d ~/upstream_latest ]
+then
+	git clone https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git ~/upstream_latest
+else
+	cd ~/upstream_latest
+	git pull origin master
+fi
+
+ret=$?
+
+exit $ret
