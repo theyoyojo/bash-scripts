@@ -92,7 +92,7 @@ remote_setup_exec() {
 # Setup the absolute basics
 yum install -y git gcc gcc-c++ make vim cmake 
 yum install -y python3-devel ncurses-devel flex bison openssl-devel elfutils-libelf-devel 
-yum install -y bc cscope libudev-devel
+yum install -y bc cscope libudev-devel wget
 git config --global user.name "$GIT_NAME"
 git config --global user.email "$GIT_EMAIL"
 
