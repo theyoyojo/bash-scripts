@@ -4,11 +4,17 @@
 #
 # Purpose: Put the latest upstream linux in the home directory
 
-if [ ! -d ~/upstream_latest ]
+# v1.1 update 17 April 2019
+# - make destination dir a variable
+
+
+DESTINATION="$HOME/upstream_latest"
+
+if [ ! -d "$DESTINATION" ]
 then
-	git clone https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git ~/upstream_latest
+	git clone https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git "$DESTINATION"
 else
-	cd ~/upstream_latest
+	cd "$DESTINATION"
 	git pull origin master
 fi
 
