@@ -1,0 +1,22 @@
+#!/bin/bash
+# gimmie_rhel8 v1 created 17 April 2019 
+# By Joel Savitz <jsavitz@redhat.com>
+#
+# Purpose: Put the latest rhel8 kernel in the home directory
+
+set -x
+
+DESTINATION="$HOME/rhel8_latest"
+GITFLAGS="-c http.sslVerify=false"
+
+if [ ! -d "$DESTINATION" ]
+then
+	git $GITFLAGS clone https://code.engineering.redhat.com/gerrit/kernel-rhel "$DESTINATION"
+else
+	cd "$DESTINATION"
+	git $GITFLAGS pull origin master
+fi
+
+ret=$?
+
+exit $ret
