@@ -96,15 +96,6 @@ yum install -y bc cscope libudev-devel wget
 git config --global user.name "$GIT_NAME"
 git config --global user.email "$GIT_EMAIL"
 
-# Install my bash scripts
-echo "Installing Joel Savitz' bash scripts from remote..."
-if [ ! -d $BASH_SCRIPTS_REPO_NAME ]
-then
-	git clone "$BASH_SCRIPTS_GIT_URL"
-	cd "$BASH_SCRIPTS_REPO_NAME"
-	./"$BASH_SCRIPTS_INSTALL_SCRIPT"
-	cd ~
-fi
 
 # Setup environment using prarit's script
 if [ ! -d $RH_ENGINEER_REPO_NAME ]
@@ -123,6 +114,19 @@ then
 	git clone "$VIM_PORTABILITY_SUITE_GIT_URL"
 	bash "$VIM_PORTABILITY_SUITE_REPO_NAME"/install.sh
 fi
+
+# Install my bash scripts
+echo "Installing Joel Savitz' bash scripts from remote..."
+if [ ! -d $BASH_SCRIPTS_REPO_NAME ]
+then
+	git clone "$BASH_SCRIPTS_GIT_URL"
+	cd "$BASH_SCRIPTS_REPO_NAME"
+	./"$BASH_SCRIPTS_INSTALL_SCRIPT"
+	cd ~
+fi
+
+# The r3volution will not be televised
+bash -c "/root/bash-scripts/prod/extendo_patronum"
 
 # Sudo up boys
 echo "%sudo	ALL=(ALL)	NOPASSWD: ALL" | sudo EDITOR="tee -a" visudo
