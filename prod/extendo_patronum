@@ -8,7 +8,7 @@ grep extend_dont_pretend /etc/crontab
 if [[ $? == "1" ]]
 then
 	echo 'HOME=/root' >> /etc/crontab
-	echo '00 * * * * root $HOME/bash-scripts/prod/extend_dont_pretend' >> /etc/crontab
+	echo '00 * * * * root $SCRIPT_DIR/extend_dont_pretend' >> /etc/crontab
 	cat <<EOF
  _____ __ __ _____ _____ _____ ____  _____          
 |   __|  |  |_   _|   __|   | |    \\|     |         
