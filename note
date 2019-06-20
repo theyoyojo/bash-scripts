@@ -1,5 +1,2 @@
-Attempt to recreate issue at work:
-
-touch <anything> | vim <anything>
-
-fucks urxvt
+beakermeup should authorize ssh key and clone rhnotes
+beakermedown should delete ssh key from home and return system to beaker if not gone
