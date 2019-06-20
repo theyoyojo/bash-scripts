@@ -1,0 +1,20 @@
+#!/bin/bash
+# extend_dont_pretend v1 created 18 April 2019 
+# By Joel Savitz <jsavitz@redhat.com>
+#
+# Purpose: Execute an extension of beaker test time
+
+PRETTY_LARGE_NUMBER=99
+
+extendtesttime.sh $PRETTY_LARGE_NUMBER
+
+if [[ $? == "1" ]]
+then
+	echo "Error extending beaker test time by $PRETTY_LARGE_NUMBER hours." > /dev/kmsg
+	exit 1
+fi	
+
+echo "Long live this machine!" > /dev/kmsg
+echo "We have secured an additional $PRETTY_LARGE_NUMBER hours from beaker." > /dev/kmsg
+
+exit 0

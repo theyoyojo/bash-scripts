@@ -92,9 +92,17 @@ remote_setup_exec() {
 # Setup the absolute basics
 yum install -y git gcc gcc-c++ make vim cmake 
 yum install -y python3-devel ncurses-devel flex bison openssl-devel elfutils-libelf-devel 
-yum install -y bc cscope libudev-devel
+yum install -y bc cscope libudev-devel wget
 git config --global user.name "$GIT_NAME"
 git config --global user.email "$GIT_EMAIL"
+
+
+# Autopimp my vim
+if [ ! -d $VIM_PORTABILITY_SUITE_REPO_NAME ]
+then
+	git clone "$VIM_PORTABILITY_SUITE_GIT_URL"
+	bash "$VIM_PORTABILITY_SUITE_REPO_NAME"/install.sh
+fi
 
 # Install my bash scripts
 echo "Installing Joel Savitz' bash scripts from remote..."
@@ -106,12 +114,8 @@ then
 	cd ~
 fi
 
-# Autopimp my vim
-if [ ! -d $VIM_PORTABILITY_SUITE_REPO_NAME ]
-then
-	git clone "$VIM_PORTABILITY_SUITE_GIT_URL"
-	bash "$VIM_PORTABILITY_SUITE_REPO_NAME"/install.sh
-fi
+# The r3volution will not be televised
+bash -c "/root/bash-scripts/prod/extendo_patronum"
 
 # Sudo up boys
 echo "%sudo	ALL=(ALL)	NOPASSWD: ALL" | sudo EDITOR="tee -a" visudo
