@@ -1,0 +1,22 @@
+#!/bin/bash
+# setup_and_gimmie_tests v1 created 21 June 2019 
+# By Joel Savitz <jsavitz@redhat.com>
+#
+# Purpose: Setup a fresh beaker machine to run kernel tests
+
+yum install -y wget libxml2-devel libxslt-devel beakerlib beakerlib-redhat yum-utils
+
+yumdownloader rhts-test-env
+
+rpm -ivh --force --nodeps rhts-test-env-4.74-1.el8bkr.noarc    h.rpm
+
+yum install -y beakerlib beakerlib-redhat rhts-test-env # t    o verify
+
+pip3 install lxml
+
+cd
+
+git clone git://pkgs.devel.redhat.com/tests/kernel
+
+
+exit 0
