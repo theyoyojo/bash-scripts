@@ -8,15 +8,12 @@ yum install -y wget libxml2-devel libxslt-devel beakerlib beakerlib-redhat yum-u
 
 yumdownloader rhts-test-env
 
-rpm -ivh --force --nodeps rhts-test-env-4.74-1.el8bkr.noarc    h.rpm
+rpm -ivh --force --nodeps rhts-test-env-4.74-1.el8bkr.noarch.rpm
 
-yum install -y beakerlib beakerlib-redhat rhts-test-env # t    o verify
+yum install -y beakerlib beakerlib-redhat rhts-test-env # to verify
 
 pip3 install lxml
 
-cd
-
-git clone git://pkgs.devel.redhat.com/tests/kernel
-
+git clone git://pkgs.devel.redhat.com/tests/kernel /mnt/tests/kernel
 
 exit 0
