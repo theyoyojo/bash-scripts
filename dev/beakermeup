@@ -5,6 +5,9 @@
 # Purpose: Enter a beaker instance and set it up if needed
 # v1.1 update on 5 March 2019: Single command configure & connect, simple history mechanism
 
+# I want to keep a local database of my beaker machines and their relative states
+# this is TODO
+
 VERSION=1.1
 SUCCESS=0
 E_INCORRECT_USAGE=1
@@ -89,6 +92,7 @@ remote_setup_exec() {
 	echo "Connecting to $USER@$HOST..."
 
 	ssh "$USER@$HOST" "bash -s" <<EOF
+ERROR=
 # Setup the absolute basics
 yum install -y git gcc gcc-c++ make vim cmake 
 yum install -y python3-devel ncurses-devel flex bison openssl-devel elfutils-libelf-devel 
@@ -96,17 +100,6 @@ yum install -y bc cscope libudev-devel wget
 git config --global user.name "$GIT_NAME"
 git config --global user.email "$GIT_EMAIL"
 
-
-# Setup environment using prarit's script
-if [ ! -d $RH_ENGINEER_REPO_NAME ]
-then
-	git clone "$RH_ENGINEER_GIT_URL"
-	cd "$RH_ENGINEER_REPO_NAME"
-
-	# Skip use creation with -s flag
-	exec "./$RH_ENGINEER_INSTALL_SCRIPT" -s 
-	cd ~
-fi
 
 # Autopimp my vim
 if [ ! -d $VIM_PORTABILITY_SUITE_REPO_NAME ]
@@ -138,8 +131,14 @@ if [ ! -z "$PLAINTEXT_PASSWORD_INSECURE" ]
 then
 	echo $PLAINTEXT_PASSWORD_INSECURE | passwd \$NEWUSER --stdin
 fi
+
+ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -P ""
+
 # place a mark in ~ to signify that this script reached the end
-touch ~/beakermeup_was_here
+if [ -z \$ERROR ]
+then
+	touch ~/beakermeup_was_here
+fi
 
 EOF
 

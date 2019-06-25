@@ -97,17 +97,6 @@ git config --global user.name "$GIT_NAME"
 git config --global user.email "$GIT_EMAIL"
 
 
-# Setup environment using prarit's script
-if [ ! -d $RH_ENGINEER_REPO_NAME ]
-then
-	git clone "$RH_ENGINEER_GIT_URL"
-	cd "$RH_ENGINEER_REPO_NAME"
-
-	# Skip use creation with -s flag
-	exec "./$RH_ENGINEER_INSTALL_SCRIPT" -s 
-	cd ~
-fi
-
 # Autopimp my vim
 if [ ! -d $VIM_PORTABILITY_SUITE_REPO_NAME ]
 then

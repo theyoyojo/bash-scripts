@@ -1,0 +1,17 @@
+#!/bin/bash
+# auto v1 created 20 June 2019 
+# By Joel Savitz <jsavitz@redhat.com>
+#
+# Purpose: Automatically repeat every five seconds
+
+shift 0
+
+for((;;))
+do
+	$@
+	sleep 5
+done
+
+exit 0
+
+exit
