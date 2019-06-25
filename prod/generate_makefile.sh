@@ -4,6 +4,8 @@
 #
 # Purpose: Generate a simple makefile as needed
 
+# TODO: Make options work
+
 VERSION=1
 SUCCESS=0
 E_INCORRECT_USAGE=1
@@ -40,7 +42,7 @@ all: \$(OBJECTS)
 	\$(CC) \$(CFLAGS) \$(OBJECTS) -o \$(BIN)
 
 %.o: %.c
-	\$(CC) \$(CFLAGS) -c $^ -o $@
+	\$(CC) \$(CFLAGS) -c $^ -o \$@
 
 .PHONEY: clean
 clean:

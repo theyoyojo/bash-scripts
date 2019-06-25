@@ -1,13 +1,13 @@
 #!/bin/bash
-# gimmie_rhel8 v1.1 created 17 April 2019 
+# gimmie_rhel7 v1 created 25 June 2019 
 # By Joel Savitz <jsavitz@redhat.com>
 #
-# Purpose: Put the latest rhel8 kernel in the home directory
-# v1.1: add ability to set custom destination dir (25 June 2019)
+# Purpose: Get that rhel7 with ease and smoothness
 
-DIRNAME="rhel8_latest"
+
+DIRNAME="rhel7_latest"
 GITFLAGS="-c http.sslVerify=false"
-REPOURL="https://code.engineering.redhat.com/gerrit/kernel-rhel"
+REPOURL="git://git.app.eng.bos.redhat.com/rhel7"
 
 if [ ! -z $1 ]; then
 	DESTINATION=$1

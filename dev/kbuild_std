@@ -1,0 +1,24 @@
+#!/bin/bash
+# kbuild_std v1 created 19 April 2019 
+# By Joel Savitz <jsavitz@redhat.com>
+#
+# Purpose: 	When at the root of a Linux kernel tree, build the kernel
+#	        +the normal way using `nproc` cores.
+
+SUCCESS=0
+E_MAKE_FAILED=1
+E_MAKE_MODULES_INSTALL_FAILED=2
+E_MAKE_INSTALL_FAILED=3
+
+NCORES=$(nproc)
+
+make 			-j $NCORES
+test $? -ne $SUCCESS && exit $E_MAKE_FAILED
+
+make modules_install 	-j $NCORES
+test $? -ne $SUCCESS && exit $E_MAKE_MODULES_INSTALL_FAILED 
+
+make install		-j $NCORES
+test $? -ne $SUCCESS && exit $E_MAKE_INSTALL_FAILED 
+
+exit $SUCCESS
