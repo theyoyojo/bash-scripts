@@ -1,0 +1,27 @@
+#!/bin/bash
+# util/ftrace v1 created 02 July 2019 
+# By Joel Savitz <jsavitz@redhat.com>
+#
+# Purpose: Source me if you like ffun
+
+ftog() {
+	toggle=/sys/kernel/debug/tracing/tracing_on
+	status=`cat $toggle`
+	if [ $status == "0" ]
+	then
+		echo "[ON] ftrace"
+		echo 1 > $toggle
+	elif [ $status == "1" ]
+	then
+		echo 0 > $toggle
+		echo "[OFF] ftrace"
+	fi
+}
+
+fwipe() {
+	echo "" >/sys/kernel/debug/tracing/trace
+}
+
+alias fvisit='cd /sys/kernel/debug/tracing'
+
+

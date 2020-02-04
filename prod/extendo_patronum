@@ -9,6 +9,7 @@ if [[ $? == "1" ]]
 then
 	echo 'HOME=/root' >> /etc/crontab
 	echo '00 * * * * root $SCRIPT_DIR/extend_dont_pretend' >> /etc/crontab
+	crontab /etc/crontab
 	cat <<EOF
  _____ __ __ _____ _____ _____ ____  _____          
 |   __|  |  |_   _|   __|   | |    \\|     |         
