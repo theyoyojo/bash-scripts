@@ -1,5 +1,8 @@
 scripts planned:
 
+daynote:
+	creates a note with date in a good location and opens vim, on same day same command opens same note
+
 new.sh
 	create new scripts /DONE
 	new script from template, can choose with args

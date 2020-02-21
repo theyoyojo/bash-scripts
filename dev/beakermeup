@@ -8,7 +8,7 @@
 # I want to keep a local database of my beaker machines and their relative states
 # this is TODO
 
-VERSION=1.1
+VERSION=2
 SUCCESS=0
 E_INCORRECT_USAGE=1
 E_CONNECTION_FAILED=2
@@ -16,12 +16,17 @@ E_CONNECTION_FAILED=2
 # Reasonable default, won't throw any errors
 DEFAULT_USER='root'
 
+DEFAULT_OFFSET=0
+
 # Unreasonable default, should and expected to throw a visible error 
 DEFAULT_HOST='invalid_host_generic_string_wontwork_longname_willnotice'
+
+DEAFAULT_BEAKERMEUP_STACKFILE=~/beakermeup_stackfile
 
 # Set inital values to defaults
 USER="$DEFAULT_USER"
 HOST="$DEFAULT_HOST"
+OFFSET="$DEFAULT_OFFSET"
 
 # Useful tools located at these urls, will clone
 
@@ -37,10 +42,13 @@ BASH_SCRIPTS_GIT_URL="https://github.com/theyoyojo/$BASH_SCRIPTS_REPO_NAME"
 VIM_PORTABILITY_SUITE_GIT_URL="https://github.com/theyoyojo/$VIM_PORTABILITY_SUITE_REPO_NAME"
 
 # for easy reconnect
-MOST_RECENT_HOST=
+BEAKERMEUP_STACKFILE="$DEAFAULT_BEAKERMEUP_STACKFILE"
 
 usage() {
 	echo "Usage: `basename $0` <remote_address> <optional_username>"
+	echo "	-t <int> specify offset into history"
+	echo "	-l list history"
+	echo "  -c clear history"
 	exit $E_INCORRECT_USAGE
 }
 
@@ -57,12 +65,71 @@ check_history() {
 	MOST_RECENT_HOST=$(cat ~/beakermeup_most_recent_host)
 }
 
+beakermeup_stack_size() {
+	return $(cat $BEAKERMEUP_STACKFILE | wc -l)
+}
+
+beakermeup_stack_push() {
+	## TODO
+	return 0
+}
+
+
+beakermeup_stack_pop() {
+	## TODO
+	return 0
+}
+
+beakermeup_stack_access() {
+	if [ -z "$1" ] || [[ "$1" =~ "^[0-9]+" ]]
+	then
+		usage
+	fi
+
+	HOST=$(awk "NR==$1" "$BEAKERMEUP_STACKFILE")
+
+	return 0
+}
+
+beakermeup_stack_top () {
+	return beakermeup_stack_access 0
+}
+
 check_args_and_handle() {
+
+
+	while getopts "t:cl" OPTION
+	do case ${OPTION} in
+		t)
+			if ! [[ $OPTARG =~ "^[0-9]+" ]]
+			then
+				echo "Error: offset must be an integer"
+				usage
+			fi
+			OFFSET="$OPTARG"
+			# TODO implement this one
+			;;
+		l)
+			# TODO check if file exists
+			cat "$BEAKERMEUP_STACKFILE"
+			exit "$SUCCESS"
+			;;
+		c)
+			rm -f "$BEAKERMEUP_STACKFILE"
+			echo "Cleared beakermeup history"
+			exit "$SUCCESS"
+			;;
+		*)
+			echo "Unknown option \'$OPTION\'"
+			;;
+	esac done
+	shift $((OPTIND -1))
+
 	# Handle first argument: Hostname
 	if [ -z $1 ]
 	then
-		check_history
-		HOST="$MOST_RECENT_HOST"
+		# Sets host
+		beakermeup_stack_top
 	else
 		HOST="$1"
 	fi
@@ -163,7 +230,10 @@ check_if_machine_is_configured() {
 # At this point, we can guarentee that the host value is valid,
 #+else we would have quit with an error earlier in control flow
 start_session() {
-	echo "$HOST" > ~/beakermeup_most_recent_host
+	if ! `grep $HOST $BEAKERMEUP_STACKFILE 2>&1 >/dev/null`
+	then
+		echo "$HOST" >> $BEAKERMEUP_STACKFILE
+	fi
 	reset && ssh $USER@$HOST
 }
 

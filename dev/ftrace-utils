@@ -24,4 +24,4 @@ fwipe() {
 
 alias fvisit='cd /sys/kernel/debug/tracing'
 
-
+echo "BTW: You should source this file and not run it as a script"
