@@ -7,7 +7,7 @@
 
 DIRNAME="rhel7_latest"
 GITFLAGS="-c http.sslVerify=false"
-REPOURL="git://git.app.eng.bos.redhat.com/rhel7"
+REPOURL="https://gitlab.com/redhat/rhel/src/kernel/rhel-7"
 
 if [ ! -z $1 ]; then
 	DESTINATION=$1
