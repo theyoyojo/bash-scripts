@@ -30,7 +30,7 @@ RH_ENGINEER_INSTALL_SCRIPT='rh-engineer_install.sh'
 BASH_SCRIPTS_INSTALL_SCRIPT='install.sh'
 
 RH_ENGINEER_GIT_URL="git://git.engineering.redhat.com/users/prarit/$RH_ENGINEER_REPO_NAME/.git"
-BASH_SCRIPTS_GIT_URL="https://github.com/theyoyojo/$BASH_SCRIPTS_REPO_NAME"
+BASH_SCRIPTS_GIT_URL="https://gitlab.cee.redhat.com/jsavitz/$BASH_SCRIPTS_REPO_NAME"
 VIM_PORTABILITY_SUITE_GIT_URL="https://github.com/theyoyojo/$VIM_PORTABILITY_SUITE_REPO_NAME"
 
 # for easy reconnect
