@@ -1,0 +1,18 @@
+#!/bin/bash
+# gimmie_c9s v1 created 10 March 2022 
+# By Joel Savitz <jsavitz@redhat.com>
+#
+# Purpose: Put the latest c9s linux in the home directory
+
+DESTINATION="${HOME}/c9s_latest"
+GITFLAGS="-c http.sslVerify=false"
+
+if [ ! -d "${DESTINATION}" ]
+then
+	git ${GITFLAGS} "clone https://gitlab.com/redhat/centos-stream/src/kernel/centos-stream-9" "${DESTINATION}"
+else
+	cd "${DESTINATION}"
+	git pull origin master
+fi
+
+ret=${?}
