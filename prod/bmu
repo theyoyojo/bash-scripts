@@ -1,0 +1,548 @@
+#!/bin/bash
+# bmu v1 created 13 October 2022 
+# By Joel Savitz <jsavitz@redhat.com>
+#
+# Purpose: beakermeup II
+
+## set up beaker machine
+
+VERSION="2.0"
+BWD="${HOME}/.beakermeup"
+HOST=
+COMM=
+USER="root"
+DEBUG=""
+TESTPASSWD="f"
+KEY=""
+VALUE=""
+
+usage() {
+	cat <<EOF
+usage: `basename ${0}` [-h | -f] <command> <arguments...>
+	-h: show this message
+	-f: continue when connection check fails
+	commands:
+		go: connect to and/or configure a remote host
+		console: connect to the console of a host
+		ping: test remote connectivity and get info
+		list: list known remote hosts
+		delete: delete local knowledge of a remote host
+		config: set a config key (\$2) to a value (\$3)
+		help: command help
+	
+	use '`basename ${0}` help [COMMAND]' for more help
+EOF
+}
+
+D() {
+	if [ ! -z "${DEBUG}" ]; then
+		printf "[DEBUG][\n${*}]\n"
+	else
+		printf ""
+	fi
+}
+
+
+
+# $1: script to run on $HOST
+run_on_remote() {
+	if ssh ${USER}@${HOST} ${1}; then
+		D "ran:\n${1}\nsuccessfully on ${USER}@${HOST}\n"
+		return 0
+	else
+		echo "failed to run on ${USER}@${HOST}"
+		D "failed script:\n${1}\nend failed script.\n"
+		return 1
+	fi
+}
+
+# $1: file to copy to remote
+# $2: (optional) destination directory (defaults to ~)
+copy_to_remote() {
+	if [ -z ${1} ]; then
+		echo "error: filename required"
+		return 1
+	fi
+	FILE=${1}
+
+	DEST=${2:-"~"}
+	if scp ${FILE} ${USER}@${HOST}:${DEST}; then
+		D "copy ${FILE} to ${DEST} on ${USER}@${HOST}\n"
+		return 0
+	else
+		echo "failed to copy ${FILE} to ${DEST} on ${USER}@${HOST}\n"
+	fi
+
+}
+
+# $1: path to file on remote
+# $2: destination
+copy_from_remote() {
+	if [ -z ${1} ]; then
+		echo "error: filename required"
+		return 1
+	fi
+	FILE=${1}
+
+	if [ -z ${2} ]; then
+		echo "error: destination required"
+		return 1
+	fi
+	DEST=${2}
+
+	if scp ${USER}@${HOST}:${FILE} ${DEST}; then
+		D "copy ${FILE} to ${DEST} from ${USER}@${HOST}\n"
+		return 0
+	else
+		echo "failed to copy ${FILE} from ${DEST} on ${USER}@${HOST}\n"
+	fi
+}
+
+hello_there() {
+	printf "Hello there, user. I am  `basename $0` v%s\n" ${VERSION}
+	printf "Working directory: ${BWD}\n"
+	printf "Command line: ${*}\n"
+	COMM=${1}
+	D "Command: ${COMM}\n"
+}
+
+# write config config file
+write_config() {
+	cat <<EOF |
+USER="${USER}"
+VERSION="${VERSION}"
+DEBUG="${DEBUG}"
+EOF
+	cat > ${BWD}/config
+	D "wrote config file in ${BWD}/config\n"
+}
+
+# load saved config values
+read_config() {
+	source "${BWD}/config"
+	D "load config from ${BWD}/config:\n$(cat "${BWD}/config")\n"
+}
+
+# default configuration values for a host
+HOST_LASTSEEN=""
+HOST_HAS_KERNELDEPS="no"
+HOST_HAS_GITCONFIG="no"
+HOST_HAS_USER="no"
+HOST_HAS_SCRIPTS="no"
+HOST_HAS_VIM="no"
+
+write_config_host() {
+	cat <<EOF |
+HOST_LASTSEEN="${HOST_LASTSEEN}"
+HOST_HAS_KERNELDEPS="${HOST_HAS_KERNELDEPS}"
+HOST_HAS_GITCONFIG="${HOST_HAS_GITCONFIG}"
+HOST_HAS_USER="${HOST_HAS_USER}"
+HOST_HAS_SCRIPTS="${HOST_HAS_SCRIPTS}"
+HOST_HAS_VIM="${HOST_HAS_VIM}"
+EOF
+	cat > "${BWD}/${HOST}.bmu"
+	D "wrote config file to ${BWD}/${HOST}.bmu"
+	copy_to_remote "${BWD}/${HOST}.bmu"
+}
+
+read_config_host() {
+	# if we don't have an entry for this host, overwrite remote config
+	if [ ! -f "${BWD}/${HOST}.bmu" ]; then
+		D "local config not found. create and copy to host\n"
+		write_config_host
+		copy_to_remote ${BWD}/${HOST}.bmu
+	fi
+
+
+	source "${BWD}/${HOST}.bmu"
+}
+
+# get a yes or no from the user
+# $1: prompt
+ask_binary() {
+	if [ -z "${1}" ]; then
+		echo "prompt required"
+	fi
+	PROMPT=${1}
+	while true; do
+		read -p "${PROMPT}" answer
+		case $answer in
+			[Yy]*) return 0;;
+			[Nn]*) return 1;;
+			*) echo "Please answer yes or no";;
+		esac
+	done
+}
+setup() {
+
+	if [ ! -d ${BWD} ]; then
+		echo "${BWD} not found. creating..."
+		if mkdir ${BWD}; then
+			echo "created ${BWD}"
+		else
+			echo "failed to create ${BWD}"
+			return 1
+		fi
+	else
+		D "found working directory ${BWD}\n"
+		read_config
+	fi
+
+	if [ ! -w ${BWD} ]; then
+		echo "${BWD} not writable"
+		return 1
+	fi
+
+	write_config
+}
+
+host_ssh_verify() {
+	if ssh -o ConnectTimeout=5 "${USER}@${HOST}" "echo"; then
+		D "verified connection to ${USER}@${HOST}\n"
+		return 0
+	else
+		echo "failed to connect to ${USER}@${HOST}"
+		if [ ! -z $ignore_failed_connection ]; then
+			return 0
+		else
+			return 1
+		fi
+	fi
+}
+
+usage_ping() {
+	cat <<EOF
+usage: `basename ${0}` ping HOSTNAME
+	Connect to HOSTNAME and check
+	basic information about a machine.
+EOF
+}
+
+# from CLI:
+# $2: remote hostname
+run_ping() {
+	if [ -z ${HOST} ]; then
+		echo "hostname is required"
+		return 1
+	fi
+	if ! host_ssh_verify ${HOST};then
+		return 1
+	fi
+
+	run_on_remote "uname -a;uptime"
+}
+
+usage_go() {
+	cat <<EOF
+usage: `basename ${0}` go HOSTNAME
+	Connect to HOSTNAME. Ensure that
+	the remote machine is configured to
+	build the upstream Linux kernel.
+EOF
+}
+
+DEPS="git gcc gcc-c++ make vim cmake  python3-devel ncurses-devel flex bison openssl-devel elfutils-libelf-devel  bc cscope libudev-devel wget openssl tar dwarves"
+
+install_kerneldeps_target() {
+	run_on_remote "dnf install -y ${DEPS}"
+}
+
+install_gitconfig_target() {
+	local git_name="$(git config --get user.name)"
+	local git_email="$(git config --get user.email)"
+
+	run_on_remote "git config --global user.name ${git_name};
+		git config --global user.email ${git_email}"
+}
+
+install_user_target() {
+
+	local newuser=`whoami`
+
+	if ! run_on_remote "id ${newuser}"; then
+		run_on_remote "useradd ${newuser}"
+	fi
+	if ! run_on_remote "cat /etc/group | grep ^sudo"; then
+		run_on_remote "groupadd sudo"
+	fi
+	run_on_remote 'echo "%sudo	ALL=(ALL)	NOPASSWD: ALL" | sudo EDITOR="tee -a" visudo'
+	run_on_remote "usermod -G sudo ${newuser}"
+	run_on_remote "echo ${TESTPASSWD} | passwd ${newuser} --stdin"
+	if run_on_remote "test ! -f ~/.ssh/id_rsa"; then
+		run_on_remote 'ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -P ""'
+	fi
+}
+
+bash_scripts_url="https://gitlab.cee.redhat.com/jsavitz/bash-scripts"
+install_scripts_target() {
+	local repo_name="${bash_scripts_url/"https://gitlab.cee.redhat.com/jsavitz/"}"
+
+	if run_on_remote "test ! -d ${repo_name}"; then
+		if run_on_remote "git -c http.sslVerify=false clone ${bash_scripts_url}"; then
+			run_on_remote "bash "${repo_name}"/install.sh"
+		fi
+	fi
+}
+
+vim_scripts_url="https://github.com/theyoyojo/vim-portability-suite"
+
+install_vim_target() {
+	local repo_name="${vim_scripts_url/"https://github.com/theyoyojo/"}"
+
+	if run_on_remote "test ! -d ${repo_name}"; then
+		if run_on_remote "git clone ${vim_scripts_url}"; then
+
+			run_on_remote "bash "${repo_name}"/install.sh"
+		fi
+	fi
+}
+
+connect_loop() {
+	while true; do
+		printf "connecting to ${USER}@${HOST}"
+		for ((i=0;i<10;++i)); do
+			sleep 0.1
+			printf "."
+		done
+		echo
+		if ssh -o ConnectTimeout=5 "${USER}@${HOST}"; then
+			D "disconnected: return of zero\n"
+		else
+			D "disconnected: return $?\n"
+		fi
+		reset
+		printf "disconnected. restarting"
+		for ((i=0;i<10;++i)); do
+			sleep 0.1
+			printf "."
+		done
+		echo
+		
+	done
+}
+
+install_targets="kerneldeps gitconfig user scripts vim"
+
+# from CLI:
+# $2: remote hostname
+run_go() {
+	if [ -z ${HOST} ]; then
+		echo "hostname is required"
+		return 1
+	fi
+	if ! host_ssh_verify ${HOST};then
+		return 1
+	fi
+
+	read_config_host
+
+	HOST_LASTSEEN="`date`"
+
+	for target in ${install_targets}; do
+		local config="HOST_HAS_${target^^}"
+		value=$(eval echo "\$${config}" | cat)
+		if [ "${value}" == "no" ]; then
+			D "Start install target $target\n"
+			if install_${target}_target; then
+				# write "yes" to HOST_HAS_$target on success
+				printf -v ${config} "yes" > /dev/null
+			else
+				echo "failed to reach install target $tareget"
+			fi 
+		fi
+	done
+
+	write_config_host
+
+	connect_loop
+}
+
+usage_config() {
+	cat <<EOF
+usage: `basename ${0}` config KEY VALUE
+	Set the variable KEY to VALUE.
+	This will be saved to the config
+	file if the key is used.
+EOF
+}
+
+# from CLI
+# $2: config key to set
+# $3: value to to set key to, leave empty to set to empty
+run_config() {
+	read_config
+
+	if [ -z ${KEY} ]; then
+		echo "key required but found empty"
+	fi
+
+	
+	eval "${KEY}=${VALUE}"
+	D "set: ${KEY}=${VALUE}\n"
+
+	write_config
+}
+
+usage_delete() {
+	cat <<EOF
+usage: `basename ${0}` delete HOSTNAME
+	Delete local knowledge on remote HOSTNAME.
+EOF
+}
+
+run_delete() {
+	if [ -z "${HOST}" ]; then
+		echo "hostname is required"
+		return 1
+	fi
+
+	if [ ! -f "${BWD}/${HOST}.bmu" ]; then
+		echo "host '${HOST}' not found"
+		return 1
+	fi
+
+	if ask_binary "Are you sure you want to delete '${BWD}/${HOST}.bmu'? "; then
+		rm "${BWD}/${HOST}.bmu"
+		echo "deleted ${BWD}/${HOST}.bmu"
+	else
+		echo "operation aborted"
+	fi
+}
+
+usage_console() {
+	cat <<EOF
+usage: `basename ${0}` console HOST
+	Connect to the console of HOST.
+EOF
+}
+
+run_console() {
+	while true; do
+		printf "connecting to console for ${HOST}"
+		for ((i=0;i<10;++i)); do
+			sleep 0.1
+			printf "."
+		done
+		echo
+		console -M "console.eng.bos.redhat.com" "${HOST}"
+		# if console -M "${HOST}"; then
+		# 	D "disconnected: return of zero\n"
+		# else
+		# 	D "disconnected: return $?\n"
+		# fi
+		reset
+		printf "disconnected. restarting"
+		for ((i=0;i<10;++i)); do
+			sleep 0.1
+			printf "."
+		done
+		echo
+		
+	done
+}
+
+usage_list() {
+	cat <<EOF
+usage: `basename ${0}` list
+	List known remotes.
+EOF
+}
+
+# list known remotes
+# takes no arguments
+run_list() {
+	for remote in $(cd ${BWD} && ls *.bmu); do
+		(
+			source $remote
+			echo "remote: ${remote/.bmu}"
+			echo "	last seen: ${HOST_LASTSEEN}"
+		)
+	done
+}
+
+usage_help() {
+	cat <<EOF
+usage: `basename ${0}` help TOPIC
+	Get information on TOPIC
+EOF
+}
+
+run_help() {
+	if ! command -v usage_${TOPIC}; then
+		echo "unknown help topic: '${TOPIC}'"
+		return 1
+	fi
+
+	usage_${TOPIC}
+}
+
+# $1: command to run
+# $2: hostname
+run() {
+	if [ -z ${1} ]; then
+		usage
+		return 1
+	fi
+
+	D "${COMM} selected\n"
+	case ${COMM} in
+		"config")
+			KEY=${2}
+			VALUE=${3}
+			;;
+		"ping")
+			HOST=${2}
+			;;
+		"console")
+			HOST=${2}
+			;;
+		"go")
+			HOST=${2}
+			;;
+		"list")
+			;;
+		"delete")
+			HOST=${2}
+			;;
+		"help")
+			TOPIC=${2}
+			;;
+		*)
+			echo "unknown command ${COMM}"
+			return 1
+			;;
+	esac
+
+	run_${COMM}
+}
+
+ignore_failed_connection=
+while getopts "hf" OPTION; do
+	case ${OPTION} in
+		h)
+			usage
+			exit 0
+			;;
+		f)
+			# ignore invalid host check
+			ignore_failed_connection=yes
+			;;
+
+		*)
+			echo "unknown option ${OPTION}"
+			usage
+			exit 0
+			;;
+	esac
+done
+shift $((OPTIND - 1))
+
+hello_there $*
+
+if setup; then
+	run ${*}
+	exit ${?}
+else
+	echo "setup failed"
+	exit 1
+fi
