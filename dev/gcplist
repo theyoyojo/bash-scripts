@@ -1,0 +1,38 @@
+#!/bin/bash
+# gcplist v1 created 06 September 2022 
+# By Joel Savitz <jsavitz@redhat.com>
+#
+# Purpose: gcpx to a list of hashes
+
+. ~/.bashrc
+
+
+while getopts "rd" OPTION; do
+	case ${OPTION} in 
+		d)
+			D=y
+			;;
+		r)
+			R=y
+			;;
+	esac
+done
+shift $((OPTIND -1))
+
+LISTFILE=${1}
+
+
+if [ ! -z ${R} ]; then
+	for ITEM in $(cat ${LISTFILE}); do
+		LIST=$(printf "%s\n%s"  ${ITEM} "${LIST}")
+	done
+else
+	LIST=$(cat ${LISTFILE})
+fi
+
+
+for ITEM in ${LIST}; do
+	test -z $D && gcpx ${ITEM} || echo ${ITEM}
+done
+	
+exit
