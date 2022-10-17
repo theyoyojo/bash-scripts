@@ -197,9 +197,20 @@ setup() {
 }
 
 host_ssh_verify() {
-	if ssh -o ConnectTimeout=5 "${USER}@${HOST}" "echo"; then
+	if ssh -o ConnectTimeout=5 "${USER}@${HOST}" "echo" &>"${BWD}/${HOST}.verify"; then
 		D "verified connection to ${USER}@${HOST}\n"
 		return 0
+	elif cat "${BWD}/${HOST}.verify" | grep "@    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @" >/dev/null; then
+		echo "Remote host key is different than local key"
+		if ask_binary "Remove local key and reconnect? "; then
+			# NOTE: should this be constant?
+			sed -i "/${HOST}/d" ~/.ssh/known_hosts
+			host_ssh_verify
+			return $?
+		else
+			echo "quitting..."
+			return 1
+		fi
 	else
 		echo "failed to connect to ${USER}@${HOST}"
 		if [ ! -z $ignore_failed_connection ]; then
@@ -225,7 +236,7 @@ run_ping() {
 		echo "hostname is required"
 		return 1
 	fi
-	if ! host_ssh_verify ${HOST};then
+	if ! host_ssh_verify;then
 		return 1
 	fi
 
@@ -259,7 +270,7 @@ install_user_target() {
 
 	local newuser=`whoami`
 
-	if ! run_on_remote "id ${newuser}"; then
+	if run_on_remote "test ! id ${newuser}"; then
 		run_on_remote "useradd ${newuser}"
 	fi
 	if ! run_on_remote "cat /etc/group | grep ^sudo"; then
@@ -330,7 +341,7 @@ run_go() {
 		echo "hostname is required"
 		return 1
 	fi
-	if ! host_ssh_verify ${HOST};then
+	if ! host_ssh_verify;then
 		return 1
 	fi
 
@@ -453,7 +464,7 @@ EOF
 run_list() {
 	for remote in $(cd ${BWD} && ls *.bmu); do
 		(
-			source $remote
+			source "${BWD}/${remote}"
 			echo "remote: ${remote/.bmu}"
 			echo "	last seen: ${HOST_LASTSEEN}"
 		)

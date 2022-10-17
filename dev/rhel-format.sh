@@ -33,15 +33,18 @@ rhel-format() {
 
 if [ -z ${1} ]; then
 	echo "No # of patches supplied! This is mandatory."
+	usage
 	exit 1
 fi
 
 if [ -z ${2} ]; then
 	echo "No bugzilla number! This is mandatory."
+	usage
 	exit 1
 fi
 
 if [ -z ${3} ]; then
+	usage
 	echo "No email prefix (but who cares!)"
 fi
 
