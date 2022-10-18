@@ -435,12 +435,11 @@ run_console() {
 			printf "."
 		done
 		echo
-		console -M "console.eng.bos.redhat.com" "${HOST}"
-		# if console -M "${HOST}"; then
-		# 	D "disconnected: return of zero\n"
-		# else
-		# 	D "disconnected: return $?\n"
-		# fi
+		if console -M "console.eng.bos.redhat.com" "${HOST}"; then
+			D "disconnected: return of zero\n"
+		else
+			D "disconnected: return $?\n"
+		fi
 		reset
 		printf "disconnected. restarting"
 		for ((i=0;i<10;++i)); do
