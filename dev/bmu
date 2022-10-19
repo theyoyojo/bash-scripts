@@ -12,9 +12,11 @@ HOST=
 COMM=
 USER="root"
 DEBUG=""
+INSTALL_TARGETS="kerneldeps gitconfig user scripts vim"
 TESTPASSWD="f"
 KEY=""
 VALUE=""
+LAST_HOST=""
 
 usage() {
 	cat <<EOF
@@ -45,7 +47,6 @@ D() {
 
 
 # $1: script to run on $HOST
-# must escape " characters
 run_on_remote() {
 	if ssh ${USER}@${HOST} "${1}"; then
 		D "ran:\n${1}\nsuccessfully on ${USER}@${HOST}\n"
@@ -59,9 +60,7 @@ run_on_remote() {
 
 # $1: condition to evaluate on $HOST
 # $2: run on $HOST when condition is true
-# must escape " characters in both arguments
 run_on_remote_if_true() {
-	echo "1: $1 \n2: $2"
 	if [ -z "${1}" ]; then
 		echo "run_on_remote_if_true: binary condition required"
 		return 1
@@ -103,6 +102,7 @@ copy_to_remote() {
 		return 0
 	else
 		echo "failed to copy ${FILE} to ${DEST} on ${USER}@${HOST}\n"
+		return 1
 	fi
 
 }
@@ -127,6 +127,7 @@ copy_from_remote() {
 		return 0
 	else
 		echo "failed to copy ${FILE} from ${DEST} on ${USER}@${HOST}\n"
+		return 1
 	fi
 }
 
@@ -144,6 +145,8 @@ write_config() {
 USER="${USER}"
 VERSION="${VERSION}"
 DEBUG="${DEBUG}"
+INSTALL_TARGETS="${INSTALL_TARGETS}"
+LAST_HOST="${LAST_HOST}"
 EOF
 	cat > ${BWD}/config
 	D "wrote config file in ${BWD}/config\n"
@@ -316,11 +319,9 @@ bash_scripts_url="https://gitlab.cee.redhat.com/jsavitz/bash-scripts"
 install_scripts_target() {
 	local repo_name="${bash_scripts_url/"https://gitlab.cee.redhat.com/jsavitz/"}"
 
-	if run_on_remote "test ! -d ${repo_name}"; then
-		if run_on_remote "git -c http.sslVerify=false clone ${bash_scripts_url}"; then
-			run_on_remote "bash "${repo_name}"/install.sh"
-		fi
-	fi
+	run_on_remote_if_true "test ! -d ${repo_name} &&
+		git -c http.sslVerify=false clone ${bash_scripts_url}.git" \
+		"bash ${repo_name}/install.sh"
 }
 
 vim_scripts_url="https://github.com/theyoyojo/vim-portability-suite"
@@ -328,15 +329,15 @@ vim_scripts_url="https://github.com/theyoyojo/vim-portability-suite"
 install_vim_target() {
 	local repo_name="${vim_scripts_url/"https://github.com/theyoyojo/"}"
 
-	if run_on_remote "test ! -d ${repo_name}"; then
-		if run_on_remote "git clone ${vim_scripts_url}"; then
-
-			run_on_remote "bash "${repo_name}"/install.sh"
-		fi
-	fi
+	run_on_remote_if_true "test ! -d ${repo_name} &&
+		git clone ${vim_scripts_url}" \
+		"bash ${repo_name}/install.sh"
 }
 
 connect_loop() {
+	LAST_HOST="${HOST}"
+	write_config
+
 	while true; do
 		printf "connecting to ${USER}@${HOST}"
 		for ((i=0;i<10;++i)); do
@@ -360,7 +361,6 @@ connect_loop() {
 	done
 }
 
-install_targets="kerneldeps gitconfig user scripts vim"
 
 # from CLI:
 # $2: remote hostname
@@ -369,6 +369,12 @@ run_go() {
 		echo "hostname is required"
 		return 1
 	fi
+
+	if [ "${HOST}" == "last" ]; then
+		echo "using last remote host: ${LAST_HOST}"
+		HOST="${LAST_HOST}"
+	fi
+
 	if ! host_ssh_verify;then
 		return 1
 	fi
@@ -377,7 +383,7 @@ run_go() {
 
 	HOST_LASTSEEN="`date`"
 
-	for target in ${install_targets}; do
+	for target in ${INSTALL_TARGETS}; do
 		local config="HOST_HAS_${target^^}"
 		value=$(eval echo "\$${config}" | cat)
 		if [ "${value}" == "no" ]; then
@@ -494,6 +500,9 @@ run_list() {
 			source "${BWD}/${remote}"
 			echo "remote: ${remote/.bmu}"
 			echo "	last seen: ${HOST_LASTSEEN}"
+			if [ "${remote/.bmu}" = "${LAST_HOST}" ]; then
+				echo "	(last connected host)"
+			fi
 		)
 	done
 }
