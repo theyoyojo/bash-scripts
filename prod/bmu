@@ -6,17 +6,56 @@
 
 ## set up beaker machine
 
-VERSION="2.0"
-BWD="${HOME}/.beakermeup"
-HOST=
-COMM=
+# Configuration defaults
+# These variables are sourced from $BWD/config on startup and
+# written back the file before connecting to the host
+
+# The username used when connecting to a host.
 USER="root"
+
+# Version of bmu used to generate config.
+# (not really used functionally)
+VERSION="2.0"
+
+# Set this to any string to enable debug output.
+# Set to empty to disable debug output.
 DEBUG=""
+
+# The working directory for the script.
+# The script attempts to create the directory if it is not found.
+BWD="${HOME}/.beakermeup"
+
+# The names of groups of scripts to be run by 'go' during configuration
+# of a remote host. Each item in the space-separated list of strings
+# refers to a bash function called install_$item_target() that assumes
+# $HOST refers to an online remote that we can ssh into as $USER. The
+# scripts are run locally and expected to use ssh and wrapper scripts
+# to ensure their targets are run on the remote host
 INSTALL_TARGETS="kerneldeps gitconfig user scripts vim"
+
+# The last host the script connected to. Initally empty, but useful for
+# quickly connecting to the previous host, e.g usage: `bmu go last`
+LAST_HOST=""
+
+
+# This string is set as the password for the user account created on a
+# configured remote named by the output of `whoami`. Yeah it's a
+# plaintext password don't worry about it. It's not supposed to be secure.
+# honestly you should just not use the user target on an insecure machine.
+# But really, you shouldn't be using insecure networks at all, and so I
+# recommend this script only be run within the assumption of a secure network
+# and private DNS, for those are the assumptions under which this script was
+# written.
 TESTPASSWD="f"
+
+# Other variables that are _not_ config values
+
+# These are set to empty in case the were not empty
+# in the calling bash environment. They are used internally.
+HOST=""
+COMM=""
 KEY=""
 VALUE=""
-LAST_HOST=""
 
 usage() {
 	cat <<EOF
@@ -27,8 +66,11 @@ usage: `basename ${0}` [-h | -f] <command> <arguments...>
 		go: connect to and/or configure a remote host
 		console: connect to the console of a host
 		ping: test remote connectivity and get info
-		list: list known remote hosts
-		delete: delete local knowledge of a remote host
+		remote: manage known remotes
+		subcommands:
+			list: list known remote hosts
+			delete: delete local knowledge of a remote host
+			edit: edit a local remote with config value \$EDITOR
 		config: set a config key (\$2) to a value (\$3)
 		help: command help
 	
@@ -36,11 +78,10 @@ usage: `basename ${0}` [-h | -f] <command> <arguments...>
 EOF
 }
 
+# Wrapper for printf: set DEBUG to non-empty to enable
 D() {
 	if [ ! -z "${DEBUG}" ]; then
 		printf "[DEBUG][\n${*}]\n"
-	else
-		printf ""
 	fi
 }
 
@@ -144,9 +185,11 @@ write_config() {
 	cat <<EOF |
 USER="${USER}"
 VERSION="${VERSION}"
+BWD="${BWD}"
 DEBUG="${DEBUG}"
 INSTALL_TARGETS="${INSTALL_TARGETS}"
 LAST_HOST="${LAST_HOST}"
+TESTPASSWD="${TESTPASSWD}"
 EOF
 	cat > ${BWD}/config
 	D "wrote config file in ${BWD}/config\n"
@@ -266,18 +309,12 @@ EOF
 
 # from CLI:
 # $2: remote hostname
+# $3: set to non-empty for quiet mode
 run_ping() {
-	if [ -z ${HOST} ]; then
-		echo "hostname is required"
-		return 1
-	fi
-	if ! host_ssh_verify;then
-		echo "unable to connnect to host \"${HOST}\""
-		return 1
-	fi
+	_prepare_to_connect || return 1
 
 	run_on_remote "uname -nvr;uptime --pretty"
-	echo "Host online."
+	test ! -z "${2}" &&echo "Host online."
 }
 
 usage_go() {
@@ -334,17 +371,61 @@ install_vim_target() {
 		"bash ${repo_name}/install.sh"
 }
 
+# print a string repetitively with a delay
+# $1: the string 	(defaults to '.')
+# $2: the delay		(defaults to 0.1s [seconds])
+# #3: the repetitions	(defauts to 10)
+# $3: the prefix	(defaults to empty)
+# $4: the suffix	(defaults to newline)
+animate_single_string() {
+	if [ -z "${1}" ]; then
+		string='.'
+	else
+		string="${1}"
+	fi
+
+	if [ -z "${2}" ]; then
+		delay='0.1'
+	else
+		delay="${2}"
+	fi
+
+	if [ -z "${3}" ]; then
+		repetitions=10
+	else
+		repetitions="${3}"
+	fi
+
+	if [ -z "${4}" ]; then
+		prefix=''
+	else
+		prefix="${4}"
+	fi
+
+	if [ -z "${5}" ]; then
+		suffix=`printf '\n'`
+	else
+		suffix="${5}"
+	fi
+
+	printf '%s' "${prefix}"
+
+	for ((i=0; i<${repetitions};++i)); do
+		sleep "${delay}"
+		printf '%s' "${string}"
+	done
+
+	printf '%s' "${suffix}"
+
+}
+
 connect_loop() {
 	LAST_HOST="${HOST}"
 	write_config
 
 	while true; do
 		printf "connecting to ${USER}@${HOST}"
-		for ((i=0;i<10;++i)); do
-			sleep 0.1
-			printf "."
-		done
-		echo
+		animate_single_string
 		if ssh -o ConnectTimeout=5 "${USER}@${HOST}"; then
 			D "disconnected: return of zero\n"
 		else
@@ -352,10 +433,7 @@ connect_loop() {
 		fi
 		reset
 		printf "disconnected. restarting"
-		for ((i=0;i<10;++i)); do
-			sleep 0.1
-			printf "."
-		done
+		animate_single_string
 		echo
 		
 	done
@@ -365,19 +443,12 @@ connect_loop() {
 # from CLI:
 # $2: remote hostname
 run_go() {
-	if [ -z ${HOST} ]; then
-		echo "hostname is required"
-		return 1
-	fi
-
 	if [ "${HOST}" == "last" ]; then
 		echo "using last remote host: ${LAST_HOST}"
 		HOST="${LAST_HOST}"
 	fi
 
-	if ! host_ssh_verify;then
-		return 1
-	fi
+	_prepare_to_connect || return 1
 
 	read_config_host
 
@@ -464,11 +535,7 @@ EOF
 run_console() {
 	while true; do
 		printf "connecting to console for ${HOST}"
-		for ((i=0;i<10;++i)); do
-			sleep 0.1
-			printf "."
-		done
-		echo
+		animate_single_string
 		if console -M "console.eng.bos.redhat.com" "${HOST}"; then
 			D "disconnected: return of zero\n"
 		else
@@ -476,10 +543,7 @@ run_console() {
 		fi
 		reset
 		printf "disconnected. restarting"
-		for ((i=0;i<10;++i)); do
-			sleep 0.1
-			printf "."
-		done
+		animate_single_string
 		echo
 		
 	done
@@ -487,22 +551,48 @@ run_console() {
 
 usage_list() {
 	cat <<EOF
-usage: `basename ${0}` list
+usage: `basename ${0}` list [ OPTION ]
 	List known remotes.
+	Pass yes as an option for machine-readable output.
 EOF
 }
 
+# returns truth of whether ${1} is the last connected host
+host_is_last() {
+	test "${1}" = "${LAST_HOST}"
+}
+
+# moved from loop below for readability
+nicefmt='[remote %s]:\n\thost: %s\n\t%slast seen: %s\n\n'
+
 # list known remotes
-# takes no arguments
+# $1: set to yes to to enable machine readable format
 run_list() {
-	for remote in $(cd ${BWD} && ls *.bmu); do
+	i=0
+	for remotefile in $(cd ${BWD} && ls *.bmu); do
+		remote="${remotefile/.bmu}"
+		i=$(echo "${i}+1" | bc)
 		(
-			source "${BWD}/${remote}"
-			echo "remote: ${remote/.bmu}"
-			echo "	last seen: ${HOST_LASTSEEN}"
-			if [ "${remote/.bmu}" = "${LAST_HOST}" ]; then
-				echo "	(last connected host)"
+			islast=
+			if [ "${MACHINE}" = "yes" ]; then
+				fmt='%s,%s,%s,%s\n'
+				if host_is_last "${remote}"; then
+					islast="yes"
+				else
+					islast="no"
+				fi
+			else
+				fmt="$nicefmt"
+				if host_is_last "${remote}"; then
+					islast=`printf '[LAST USED]\n\t'`
+				else
+					islast=""
+				fi
 			fi
+			source "${BWD}/${remotefile}"
+			# index host lastconnected lastseen
+			printf  "${fmt}" \
+				"${i}" "${remote}" "${islast}" "${HOST_LASTSEEN}"
 		)
 	done
 }
@@ -530,17 +620,45 @@ usage: `basename ${0}` test ARGUMENTS...
 EOF
 }
 
-# $1,$2,$3 => ARG1, ARG2, ARG3
-run_test() {
-	HOST=${ARG2}
+# The hostref to reference is assumed to be in $HOST.
+# If $HOST is a HOSTREF:
+# 	Upon termination, $HOST will be set to the hostname
+#	referenced by the HOSTREF initially in $HOST
+# Else:
+#	This function does not modify $HOST
+# FAQ:
+#	Q: What is a HOSTREF?
+# 	A: A HOSTREF is a reference to a hostname that takes
+#	   the form of either a number prefixed by '@', or
+#	   a string previously defined to be an alias of
+#	   a hostname. Or, to put it another way:
+#		HOSTREF := @[0-9]? | [a-zA-Z_]+[a-zA-Z0-9_]?
+#	Q: What do the numbered HOSTREFs with the '@' prefixes
+#	   refer to?
+#	A: A HOSTREF of the form '@[0-9]?' refers
+_dereference_hostref() {
+	if [ "${HOST}" == "last" ]; then
+		echo "using last remote host: ${LAST_HOST}"
+		HOST="${LAST_HOST}"
+	fi
+}
+
+# assumes $HOST is set to the target remote or remote reference
+_prepare_to_connect() {
 	if [ -z "${HOST}" ]; then
-		echo "hostname is required"
+		echo "prepare_to_connect: hostname is required"
 		return 1
 	fi
 	if ! host_ssh_verify;then
-		echo "unable to connnect to host \"${HOST}\""
+		echo "prepare_to_conect: unable to connnect to host \"${HOST}\""
 		return 1
 	fi
+}
+
+# $1,$2,$3 => ARG1, ARG2, ARG3
+run_test() {
+	HOST=${ARG2}
+	_prepare_to_connect || return 1
 
 	FOO="[ ! -z \"foo\" ]"
 	
@@ -575,6 +693,7 @@ run() {
 			HOST=${2}
 			;;
 		"list")
+			MACHINE=${2}
 			;;
 		"delete")
 			HOST=${2}
