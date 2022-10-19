@@ -45,8 +45,9 @@ D() {
 
 
 # $1: script to run on $HOST
+# must escape " characters
 run_on_remote() {
-	if ssh ${USER}@${HOST} ${1}; then
+	if ssh ${USER}@${HOST} "${1}"; then
 		D "ran:\n${1}\nsuccessfully on ${USER}@${HOST}\n"
 		return 0
 	else
@@ -54,6 +55,37 @@ run_on_remote() {
 		D "failed script:\n${1}\nend failed script.\n"
 		return 1
 	fi
+}
+
+# $1: condition to evaluate on $HOST
+# $2: run on $HOST when condition is true
+# must escape " characters in both arguments
+run_on_remote_if_true() {
+	echo "1: $1 \n2: $2"
+	if [ -z "${1}" ]; then
+		echo "run_on_remote_if_true: binary condition required"
+		return 1
+	else
+		CONDITION="${1}"
+	fi
+
+	if [ -z "${2}" ]; then
+		# no-op
+		SCRIPT=":"
+	else
+		SCRIPT="${2}"
+	fi
+
+	run_on_remote "if ${CONDITION} ; then
+		${SCRIPT};
+	fi"
+}
+
+# $1: condition to evaluate on $HOST
+# $2: run on $HOST when condition is false
+# must escape " characters in both arguments
+run_on_remote_if_false() {
+	run_on_remote_if_true "! $1 " "${2}"
 }
 
 # $1: file to copy to remote
@@ -237,10 +269,12 @@ run_ping() {
 		return 1
 	fi
 	if ! host_ssh_verify;then
+		echo "unable to connnect to host \"${HOST}\""
 		return 1
 	fi
 
-	run_on_remote "uname -a;uptime"
+	run_on_remote "uname -nvr;uptime --pretty"
+	echo "Host online."
 }
 
 usage_go() {
@@ -270,18 +304,12 @@ install_user_target() {
 
 	local newuser=`whoami`
 
-	if run_on_remote "test ! id ${newuser}"; then
-		run_on_remote "useradd ${newuser}"
-	fi
-	if ! run_on_remote "cat /etc/group | grep ^sudo"; then
-		run_on_remote "groupadd sudo"
-	fi
+	run_on_remote_if_false "id ${newuser}" "useradd ${newuser}"
+	run_on_remote_if_false "cat /etc/group | grep ^sudo" "groupadd sudo"
 	run_on_remote 'echo "%sudo	ALL=(ALL)	NOPASSWD: ALL" | sudo EDITOR="tee -a" visudo'
 	run_on_remote "usermod -G sudo ${newuser}"
 	run_on_remote "echo ${TESTPASSWD} | passwd ${newuser} --stdin"
-	if run_on_remote "test ! -f ~/.ssh/id_rsa"; then
-		run_on_remote 'ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -P ""'
-	fi
+	run_on_remote_if_false "test ! -f ~/.ssh/id_rsa" 'ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -P ""'
 }
 
 bash_scripts_url="https://gitlab.cee.redhat.com/jsavitz/bash-scripts"
@@ -358,7 +386,7 @@ run_go() {
 				# write "yes" to HOST_HAS_$target on success
 				printf -v ${config} "yes" > /dev/null
 			else
-				echo "failed to reach install target $tareget"
+				echo "failed to reach install target $target"
 			fi 
 		fi
 	done
@@ -486,6 +514,34 @@ run_help() {
 	usage_${TOPIC}
 }
 
+usage_test() {
+	cat <<EOF
+usage: `basename ${0}` test ARGUMENTS...
+	Random tests.
+EOF
+}
+
+# $1,$2,$3 => ARG1, ARG2, ARG3
+run_test() {
+	HOST=${ARG2}
+	if [ -z "${HOST}" ]; then
+		echo "hostname is required"
+		return 1
+	fi
+	if ! host_ssh_verify;then
+		echo "unable to connnect to host \"${HOST}\""
+		return 1
+	fi
+
+	FOO="[ ! -z \"foo\" ]"
+	
+	run_on_remote "if ${FOO} ; then
+		echo \"true\";
+	else
+		echo \"false\";
+	fi"
+}
+
 # $1: command to run
 # $2: hostname
 run() {
@@ -516,6 +572,11 @@ run() {
 			;;
 		"help")
 			TOPIC=${2}
+			;;
+		"test")
+			ARG1=${1}
+			ARG2=${2}
+			ARG3=${3}
 			;;
 		*)
 			echo "unknown command ${COMM}"
