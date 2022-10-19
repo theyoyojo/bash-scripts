@@ -37,6 +37,9 @@ INSTALL_TARGETS="kerneldeps gitconfig user scripts vim"
 # quickly connecting to the previous host, e.g usage: `bmu go last`
 LAST_HOST=""
 
+# This editor is invoked to edit text files when the script calls for it,
+# e.g:`bmu host edit HOSTNAME`.
+EDITOR="vim"
 
 # This string is set as the password for the user account created on a
 # configured remote named by the output of `whoami`. Yeah it's a
@@ -54,8 +57,12 @@ TESTPASSWD="f"
 # in the calling bash environment. They are used internally.
 HOST=""
 COMM=""
+SUBCOMM=""
 KEY=""
 VALUE=""
+ARG1=""
+ARG2=""
+ARG3=""
 
 usage() {
 	cat <<EOF
@@ -66,11 +73,11 @@ usage: `basename ${0}` [-h | -f] <command> <arguments...>
 		go: connect to and/or configure a remote host
 		console: connect to the console of a host
 		ping: test remote connectivity and get info
-		remote: manage known remotes
+		host: manage known remote hosts
 		subcommands:
 			list: list known remote hosts
 			delete: delete local knowledge of a remote host
-			edit: edit a local remote with config value \$EDITOR
+			edit: edit a local host config with \$EDITOR
 		config: set a config key (\$2) to a value (\$3)
 		help: command help
 	
@@ -244,7 +251,7 @@ ask_binary() {
 	PROMPT=${1}
 	while true; do
 		read -p "${PROMPT}" answer
-		case $answer in
+		case "$answer" in
 			[Yy]*) return 0;;
 			[Nn]*) return 1;;
 			*) echo "Please answer yes or no";;
@@ -499,6 +506,23 @@ run_config() {
 	write_config
 }
 
+usage_edit() {
+	cat <<EOF
+usage: `basename ${0}` edit HOSTNAME
+	Edit HOSTNAME config with \$EDITOR if
+	the file exists.
+EOF
+}
+
+run_edit() {
+	if ! dereference_hostref; then
+		echo "unable to dereference hostref"
+		return 1
+	fi
+
+	$EDITOR "${BWD}/${HOST}.bmu"
+}
+
 usage_delete() {
 	cat <<EOF
 usage: `basename ${0}` delete HOSTNAME
@@ -551,7 +575,7 @@ run_console() {
 
 usage_list() {
 	cat <<EOF
-usage: `basename ${0}` list [ OPTION ]
+usage: `basename ${0}` list [ OPTIONS ]
 	List known remotes.
 	Pass yes as an option for machine-readable output.
 EOF
@@ -571,10 +595,9 @@ run_list() {
 	i=0
 	for remotefile in $(cd ${BWD} && ls *.bmu); do
 		remote="${remotefile/.bmu}"
-		i=$(echo "${i}+1" | bc)
 		(
 			islast=
-			if [ "${MACHINE}" = "yes" ]; then
+			if [ "${OPTIONS}" = "yes" ]; then
 				fmt='%s,%s,%s,%s\n'
 				if host_is_last "${remote}"; then
 					islast="yes"
@@ -594,6 +617,7 @@ run_list() {
 			printf  "${fmt}" \
 				"${i}" "${remote}" "${islast}" "${HOST_LASTSEEN}"
 		)
+		i=$(echo "${i}+1" | bc)
 	done
 }
 
@@ -613,13 +637,6 @@ run_help() {
 	usage_${TOPIC}
 }
 
-usage_test() {
-	cat <<EOF
-usage: `basename ${0}` test ARGUMENTS...
-	Random tests.
-EOF
-}
-
 # The hostref to reference is assumed to be in $HOST.
 # If $HOST is a HOSTREF:
 # 	Upon termination, $HOST will be set to the hostname
@@ -632,15 +649,46 @@ EOF
 #	   the form of either a number prefixed by '@', or
 #	   a string previously defined to be an alias of
 #	   a hostname. Or, to put it another way:
-#		HOSTREF := @[0-9]? | [a-zA-Z_]+[a-zA-Z0-9_]?
+#		HOSTREF := @[0-9]+ | [a-zA-Z_]?[a-zA-Z0-9_]+
 #	Q: What do the numbered HOSTREFs with the '@' prefixes
 #	   refer to?
-#	A: A HOSTREF of the form '@[0-9]?' refers
-_dereference_hostref() {
+#	A: A HOSTREF of the form '@[0-9]+' refers to the an index
+#          for a host that can be found with `bmu list`. The
+#	   indices start from 0. Some syntactically valid
+#	   HOSTREFs of this type are beyond the highest index in
+#	   the list, and using them will produce an error.
+#	Q: Are there any aliases predefined of built-in?
+#	A: Right now the only built-in is 'last', which refers to
+#	   the most recently used host. I plan to add some more if
+#	   I think of useful ones.
+#	Q: How can I define my own aliases?
+#	A: I haven't implemented this feature yet. It is a TODO.
+#	Q: Does this function assume that $HOST is set to something valid?
+#	A: Yes.
+dereference_hostref() {
+	old=${HOST}
+	# Test if $HOST contains an index reference
+	if [[ "${HOST}" =~ ^\@[[:digit:]]+$ ]]; then
+		index=${HOST/@}
+		D "index reference: $index"
+		OPTIONS="yes"
+		HOST=`run_list |
+			awk -v idx="${index}" \
+			'BEGIN 		{ FS="," }
+			 $1 ~ idx	{ print $2 }'`
+		if [ -z "${HOST}" ]; then
+			echo "index ${index} is out of bounds"
+			return 1
+		fi
+	fi
+
 	if [ "${HOST}" == "last" ]; then
 		echo "using last remote host: ${LAST_HOST}"
 		HOST="${LAST_HOST}"
 	fi
+	# TODO: custom alias dereference
+
+	printf "HOSTREF '%s' resolved to '%s'\n" "${old}" "${HOST}"
 }
 
 # assumes $HOST is set to the target remote or remote reference
@@ -649,24 +697,76 @@ _prepare_to_connect() {
 		echo "prepare_to_connect: hostname is required"
 		return 1
 	fi
+
+	if ! dereference_hostref; then
+		echo "failed to dereference HOSTREF ${HOST}"
+		return 1
+	fi
+
 	if ! host_ssh_verify;then
 		echo "prepare_to_conect: unable to connnect to host \"${HOST}\""
 		return 1
 	fi
 }
 
+usage_host() {
+	cat <<EOF
+usage: `basename ${0}` host SUBCOMMAND ARGUMENTS...
+	A set of functions to manage known remote hosts.
+	subcommands:
+		list OPTIONS
+			List locally known hosts.
+			Pass "yes" as an option to display relatively
+			machine-readable output (comma separated values).
+		edit HOST
+			edit the config HOST if it exists
+		delete HOST
+			delete local knowledge of a remote host
+EOF
+}
+
+run_host() {
+	case "${SUBCOMM}" in
+		"list")
+			OPTIONS=${ARG3}
+			;;
+		"delete")
+			HOST=${ARG3}
+			;;
+		"edit")
+			HOST=${ARG3}
+			;;
+		*)
+			echo "unknown subcommand ${SUBCOMM}"
+			return 1
+			;;
+	esac
+
+	run_${SUBCOMM}	
+}
+
+usage_test() {
+	cat <<EOF
+usage: `basename ${0}` test ARGUMENTS...
+	Random tests.
+EOF
+}
+
 # $1,$2,$3 => ARG1, ARG2, ARG3
 run_test() {
 	HOST=${ARG2}
-	_prepare_to_connect || return 1
+	# _prepare_to_connect || return 1
 
-	FOO="[ ! -z \"foo\" ]"
+	# FOO="[ ! -z \"foo\" ]"
 	
-	run_on_remote "if ${FOO} ; then
-		echo \"true\";
-	else
-		echo \"false\";
-	fi"
+	# run_on_remote "if ${FOO} ; then
+	# 	echo \"true\";
+	# else
+	# 	echo \"false\";
+	# fi"
+
+	dereference_hostref
+	echo "\$HOST after dereference: ${HOST}"
 }
 
 # $1: command to run
@@ -678,7 +778,7 @@ run() {
 	fi
 
 	D "${COMM} selected\n"
-	case ${COMM} in
+	case "${COMM}" in
 		"config")
 			KEY=${2}
 			VALUE=${3}
@@ -692,11 +792,9 @@ run() {
 		"go")
 			HOST=${2}
 			;;
-		"list")
-			MACHINE=${2}
-			;;
-		"delete")
-			HOST=${2}
+		"host")
+			SUBCOMM=${2}
+			ARG3=${3}
 			;;
 		"help")
 			TOPIC=${2}
@@ -717,7 +815,7 @@ run() {
 
 ignore_failed_connection=
 while getopts "hf" OPTION; do
-	case ${OPTION} in
+	case "${OPTION}" in
 		h)
 			usage
 			exit 0
