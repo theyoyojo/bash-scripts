@@ -182,7 +182,7 @@ copy_from_remote() {
 hello_there() {
 	printf "Hello there, user. I am  `basename $0` v%s\n" ${VERSION}
 	printf "Working directory: ${BWD}\n"
-	printf "Command line: ${*}\n"
+	printf "Command line: `basename $0` ${*}\n"
 	COMM=${1}
 	D "Command: ${COMM}\n"
 }
@@ -210,6 +210,7 @@ read_config() {
 
 # default configuration values for a host
 HOST_LASTSEEN=""
+HOST_HOSTNAME=""
 HOST_HAS_KERNELDEPS="no"
 HOST_HAS_GITCONFIG="no"
 HOST_HAS_USER="no"
@@ -219,6 +220,7 @@ HOST_HAS_VIM="no"
 write_config_host() {
 	cat <<EOF |
 HOST_LASTSEEN="${HOST_LASTSEEN}"
+HOST_HOSTNAME="${HOST_HOSTNAME}"
 HOST_HAS_KERNELDEPS="${HOST_HAS_KERNELDEPS}"
 HOST_HAS_GITCONFIG="${HOST_HAS_GITCONFIG}"
 HOST_HAS_USER="${HOST_HAS_USER}"
@@ -460,6 +462,7 @@ run_go() {
 	read_config_host
 
 	HOST_LASTSEEN="`date`"
+	HOST_HOSTNAME="${HOST}"
 
 	for target in ${INSTALL_TARGETS}; do
 		local config="HOST_HAS_${target^^}"
@@ -533,6 +536,11 @@ EOF
 run_delete() {
 	if [ -z "${HOST}" ]; then
 		echo "hostname is required"
+		return 1
+	fi
+
+	if ! dereference_hostref; then
+		echo "failed to dereference hostref"
 		return 1
 	fi
 
