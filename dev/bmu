@@ -138,7 +138,7 @@ run_on_remote_if_false() {
 # $1: file to copy to remote
 # $2: (optional) destination directory (defaults to ~)
 copy_to_remote() {
-	if [ -z ${1} ]; then
+	if [ -z "${1}" ]; then
 		echo "error: filename required"
 		return 1
 	fi
@@ -158,19 +158,19 @@ copy_to_remote() {
 # $1: path to file on remote
 # $2: destination
 copy_from_remote() {
-	if [ -z ${1} ]; then
+	if [ -z "${1}" ]; then
 		echo "error: filename required"
 		return 1
 	fi
 	FILE=${1}
 
-	if [ -z ${2} ]; then
+	if [ -z "${2}" ]; then
 		echo "error: destination required"
 		return 1
 	fi
 	DEST=${2}
 
-	if scp ${USER}@${HOST}:${FILE} ${DEST}; then
+	if scp ${USER}@${HOST}:${FILE} "${DEST}"; then
 		D "copy ${FILE} to ${DEST} from ${USER}@${HOST}\n"
 		return 0
 	else
@@ -221,6 +221,9 @@ write_config_host() {
 	cat <<EOF |
 HOST_LASTSEEN="${HOST_LASTSEEN}"
 HOST_HOSTNAME="${HOST_HOSTNAME}"
+HOST_KERNEL="${HOST_KERNEL}"
+HOST_UNAMENVR="${HOST_UNAMENVR}"
+HOST_UPTIME="${HOST_UPTIME}"
 HOST_HAS_KERNELDEPS="${HOST_HAS_KERNELDEPS}"
 HOST_HAS_GITCONFIG="${HOST_HAS_GITCONFIG}"
 HOST_HAS_USER="${HOST_HAS_USER}"
@@ -262,7 +265,7 @@ ask_binary() {
 }
 setup() {
 
-	if [ ! -d ${BWD} ]; then
+	if [ ! -d "${BWD}" ]; then
 		echo "${BWD} not found. creating..."
 		if mkdir ${BWD}; then
 			echo "created ${BWD}"
@@ -275,7 +278,7 @@ setup() {
 		read_config
 	fi
 
-	if [ ! -w ${BWD} ]; then
+	if [ ! -w "${BWD}" ]; then
 		echo "${BWD} not writable"
 		return 1
 	fi
@@ -284,8 +287,16 @@ setup() {
 }
 
 host_ssh_verify() {
-	if ssh -o ConnectTimeout=5 "${USER}@${HOST}" "echo" &>"${BWD}/${HOST}.verify"; then
+	if ssh -o ConnectTimeout=5 "${USER}@${HOST}" \
+		"uname -nvr;uptime --pretty" &>"${BWD}/${HOST}.verify"; then
 		D "verified connection to ${USER}@${HOST}\n"
+
+		# save information obtained just above
+		HOST_UNAMENVR=`cat "${BWD}/${HOST}.verify" | awk 'NR==1 { print }'`
+		HOST_KERNEL=`cat "${BWD}/${HOST}.verify" |
+			awk -v host=${HOST} '$1 ~ host { print $2 }'`
+		HOST_UPTIME=`cat "${BWD}/${HOST}.verify" | awk 'NR==2 { print }'`
+
 		return 0
 	elif cat "${BWD}/${HOST}.verify" | grep "@    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @" >/dev/null; then
 		echo "Remote host key is different than local key"
@@ -300,7 +311,7 @@ host_ssh_verify() {
 		fi
 	else
 		echo "failed to connect to ${USER}@${HOST}"
-		if [ ! -z $ignore_failed_connection ]; then
+		if [ ! -z "${ignore_failed_connection}" ]; then
 			return 0
 		else
 			return 1
@@ -318,12 +329,11 @@ EOF
 
 # from CLI:
 # $2: remote hostname
-# $3: set to non-empty for quiet mode
 run_ping() {
 	_prepare_to_connect || return 1
 
-	run_on_remote "uname -nvr;uptime --pretty"
-	test ! -z "${2}" &&echo "Host online."
+	printf "%s\n%s\n" "${HOST_UNAMENVR}" "${HOST_UPTIME}"
+	echo "Host online."
 }
 
 usage_go() {
@@ -459,8 +469,6 @@ run_go() {
 
 	_prepare_to_connect || return 1
 
-	read_config_host
-
 	HOST_LASTSEEN="`date`"
 	HOST_HOSTNAME="${HOST}"
 
@@ -498,7 +506,7 @@ EOF
 run_config() {
 	read_config
 
-	if [ -z ${KEY} ]; then
+	if [ -z "${KEY}" ]; then
 		echo "key required but found empty"
 	fi
 
@@ -568,7 +576,7 @@ run_console() {
 	while true; do
 		printf "connecting to console for ${HOST}"
 		animate_single_string
-		if console -M "console.eng.bos.redhat.com" "${HOST}"; then
+		if console -M "conserver-02.eng.bos.redhat.com" "${HOST}"; then
 			D "disconnected: return of zero\n"
 		else
 			D "disconnected: return $?\n"
@@ -601,7 +609,15 @@ nicefmt='[remote %s]:\n\thost: %s\n\t%slast seen: %s\n\n'
 # $1: set to yes to to enable machine readable format
 run_list() {
 	i=0
-	for remotefile in $(cd ${BWD} && ls *.bmu); do
+	HOSTFILES=$(cd ${BWD} && ls *.bmu 2>/dev/null || echo none)
+
+	# no saved hosts
+	if [ ${HOSTFILES} == "none" ]; then
+		printf "\t(no saved hosts)\n"
+		return 0
+	fi
+
+	for remotefile in $HOSTFILES; do
 		remote="${remotefile/.bmu}"
 		(
 			islast=
@@ -701,6 +717,9 @@ dereference_hostref() {
 
 # assumes $HOST is set to the target remote or remote reference
 _prepare_to_connect() {
+
+	read_config_host
+
 	if [ -z "${HOST}" ]; then
 		echo "prepare_to_connect: hostname is required"
 		return 1
@@ -715,6 +734,8 @@ _prepare_to_connect() {
 		echo "prepare_to_conect: unable to connnect to host \"${HOST}\""
 		return 1
 	fi
+
+	write_config_host
 }
 
 usage_host() {
