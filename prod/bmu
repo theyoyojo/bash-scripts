@@ -149,7 +149,7 @@ copy_to_remote() {
 		D "copy ${FILE} to ${DEST} on ${USER}@${HOST}\n"
 		return 0
 	else
-		echo "failed to copy ${FILE} to ${DEST} on ${USER}@${HOST}\n"
+		echo "failed to copy ${FILE} to ${DEST} on ${USER}@${HOST}"
 		return 1
 	fi
 
@@ -174,7 +174,7 @@ copy_from_remote() {
 		D "copy ${FILE} to ${DEST} from ${USER}@${HOST}\n"
 		return 0
 	else
-		echo "failed to copy ${FILE} from ${DEST} on ${USER}@${HOST}\n"
+		echo "failed to copy ${FILE} from ${DEST} on ${USER}@${HOST}"
 		return 1
 	fi
 }
@@ -286,6 +286,7 @@ setup() {
 	write_config
 }
 
+# recursive bash function :)
 host_ssh_verify() {
 	if ssh -o ConnectTimeout=5 "${USER}@${HOST}" \
 		"uname -nvr;uptime --pretty" &>"${BWD}/${HOST}.verify"; then
@@ -312,7 +313,9 @@ host_ssh_verify() {
 	else
 		echo "failed to connect to ${USER}@${HOST}"
 		if [ ! -z "${ignore_failed_connection}" ]; then
-			return 0
+			echo "-f specified... KEEP TRYING!"
+			host_ssh_verify
+			return $?
 		else
 			return 1
 		fi
@@ -612,7 +615,7 @@ run_list() {
 	HOSTFILES=$(cd ${BWD} && ls *.bmu 2>/dev/null || echo none)
 
 	# no saved hosts
-	if [ ${HOSTFILES} == "none" ]; then
+	if [ "${HOSTFILES}" == "none" ]; then
 		printf "\t(no saved hosts)\n"
 		return 0
 	fi
@@ -731,7 +734,7 @@ _prepare_to_connect() {
 	fi
 
 	if ! host_ssh_verify;then
-		echo "prepare_to_conect: unable to connnect to host \"${HOST}\""
+		echo "prepare_to_connect: unable to connnect to host \"${HOST}\""
 		return 1
 	fi
 
@@ -851,7 +854,7 @@ while getopts "hf" OPTION; do
 			;;
 		f)
 			# ignore invalid host check
-			ignore_failed_connection=yes
+			ignore_failed_connection="yes"
 			;;
 
 		*)
