@@ -721,8 +721,6 @@ dereference_hostref() {
 # assumes $HOST is set to the target remote or remote reference
 _prepare_to_connect() {
 
-	read_config_host
-
 	if [ -z "${HOST}" ]; then
 		echo "prepare_to_connect: hostname is required"
 		return 1
@@ -732,6 +730,8 @@ _prepare_to_connect() {
 		echo "failed to dereference HOSTREF ${HOST}"
 		return 1
 	fi
+
+	read_config_host
 
 	if ! host_ssh_verify;then
 		echo "prepare_to_connect: unable to connnect to host \"${HOST}\""
