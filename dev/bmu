@@ -77,6 +77,7 @@ usage: `basename ${0}` [-h | -f] <command> <arguments...>
 		subcommands:
 			list: list known remote hosts
 			delete: delete local knowledge of a remote host
+			return: return a host to beaker
 			edit: edit a local host config with \$EDITOR
 		config: set a config key (\$2) to a value (\$3)
 		help: command help
@@ -568,6 +569,23 @@ run_delete() {
 	fi
 }
 
+usage_return() {
+	cat <<EOF
+usage: `basename ${0}` return HOSTNAME
+	return HOSTNAME to beaker and optionally delete local knowledge.
+EOF
+}
+
+run_return() {
+	_prepare_to_connect || return 1
+
+	if run_on_remote "return2beaker.sh"; then
+		echo "Host returned. Running delete"
+		run_delete
+	fi
+
+}
+
 usage_console() {
 	cat <<EOF
 usage: `basename ${0}` console HOST
@@ -763,6 +781,9 @@ run_host() {
 			OPTIONS=${ARG3}
 			;;
 		"delete")
+			HOST=${ARG3}
+			;;
+		"return")
 			HOST=${ARG3}
 			;;
 		"edit")
