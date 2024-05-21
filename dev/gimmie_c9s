@@ -9,7 +9,7 @@ GITFLAGS="-c http.sslVerify=false"
 
 if [ ! -d "${DESTINATION}" ]
 then
-	git ${GITFLAGS} "clone" "https://gitlab.com/redhat/centos-stream/src/kernel/centos-stream-9" "${DESTINATION}"
+	git ${GITFLAGS} clone https://gitlab.com/redhat/centos-stream/src/kernel/centos-stream-9 ${DESTINATION}
 else
 	cd "${DESTINATION}"
 	git pull origin master
